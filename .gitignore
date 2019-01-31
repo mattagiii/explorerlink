@@ -11,7 +11,7 @@ utils
 *.ccxml
 
 # Doxygen files to ignore
-#docs
+html
 doxygen_config
 Doxyfile
 
