@@ -1,8 +1,24 @@
 /*
  * analog_task.c
+ * FreeRTOS task for PI climate control loop, along with analog sampling ISRs
+ * and analog-related utility functions.
  *
- *  Created on: Jun 9, 2018
- *      Author: Matt
+ * Copyright 2018, 2019 Matt Rounds
+ *
+ * This file is part of ExplorerLink.
+ *
+ * ExplorerLink is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * ExplorerLink is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * ExplorerLink. If not, see <https://www.gnu.org/licenses/>.
  */
 
 
@@ -23,11 +39,11 @@
 #include "utils/uartstdio.h"
 #include "analog_task.h"
 #include "channel.h"
+#include "debug_helper.h"
 #include "hibernate_rtc.h"
 #include "priorities.h"
 #include "sample.h"
 #include "stack_sizes.h"
-#include "test_helper.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"

@@ -1,8 +1,23 @@
 /*
  * can_task.c
+ * A FreeRTOS task that processes CAN message data, and the CAN ISR.
  *
- *  Created on: May 10, 2018
- *      Author: Matt
+ * Copyright 2018, 2019 Matt Rounds
+ *
+ * This file is part of ExplorerLink.
+ *
+ * ExplorerLink is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * ExplorerLink is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * ExplorerLink. If not, see <https://www.gnu.org/licenses/>.
  */
 
 
@@ -23,11 +38,11 @@
 #include "utils/uartstdio.h"
 #include "can_task.h"
 #include "channel.h"
+#include "debug_helper.h"
 #include "hibernate_rtc.h"
 #include "priorities.h"
 #include "remote_start_task.h"
 #include "stack_sizes.h"
-#include "test_helper.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
@@ -99,6 +114,7 @@ uint32_t pulObj2ID[] = {
 /* A global to keep track of the error flags that have been thrown so they may
  * be processed. */
 volatile uint32_t ulErrFlag = 0;
+
 
 /*
  * The CAN0 interrupt handler notifies the CAN task when a message is received
@@ -298,8 +314,10 @@ CANErrorHandler(void) {
     }
 }
 
-static void
-CANTask( void *pvParameters ) {
+/*
+ * This task performs CAN message processing deferred from the CAN ISR.
+ */
+static void CANTask( void *pvParameters ) {
 
     /* Task notification value. The bits in this value map to the 32 message
      * objects. */
@@ -351,10 +369,8 @@ CANTask( void *pvParameters ) {
                         /* Read the message from the message object. The
                          * interrupt clearing flag is not set because this
                          * interrupt was already cleared in the ISR. */
-//                        GPIOPinWrite( GPIO_PORTF_BASE, UINT32_MAX, 18 + ulObjNum );
                         CANMessageGet( CAN0_BASE, ulObjNum, &xCAN0RxMessage,
                                        0 );
-//                        GPIOPinWrite( GPIO_PORTF_BASE, UINT32_MAX, 3 );
 
                         /* Check to see if there is an indication that some
                          * messages were lost. For this to occur, this task
@@ -370,7 +386,6 @@ CANTask( void *pvParameters ) {
                             CANMessageSet( CAN0_BASE, ulObjNum,
                                            &xCAN0RxMessage,
                                            MSG_OBJ_TYPE_RX );
-//                            GPIOPinWrite( GPIO_PORTF_BASE, UINT32_MAX, 3 );
                         }
 
                         /* Ensure that new data has been read (which should
@@ -384,10 +399,8 @@ CANTask( void *pvParameters ) {
                             ulCANOldDataCount++;
                         }
                         else {
-//                            GPIOPinWrite( GPIO_PORTF_BASE, UINT32_MAX, 21 );
                             vChannelStoreCANData( xCAN0RxMessage.ui32MsgID,
                                                   xCAN0RxMessage.pui8MsgData );
-//                            GPIOPinWrite( GPIO_PORTF_BASE, UINT32_MAX, 3 );
                         }
 
                     } /* if ( ( 1 << ulObjNum ) & ulNotificationValue ) */

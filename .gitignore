@@ -6,6 +6,7 @@ utils
 .ccsproject
 .cproject
 .project
+startup_ccs.c
 *.cmd
 *.ini_initial
 *.ccxml

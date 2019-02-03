@@ -1,6 +1,6 @@
 /*
- * can_task.h
- * Handle to and public initialization function for CAN task.
+ * debug_helper.h
+ * Tools for debugging ExplorerLink.
  *
  * Copyright 2018, 2019 Matt Rounds
  *
@@ -21,14 +21,13 @@
  */
 
 
-#ifndef __CAN_TASK_H__
-#define __CAN_TASK_H__
+#ifndef __DEBUG_HELPER_H__
+#define __DEBUG_HELPER_H__
 
-#include "FreeRTOS.h"
-#include "task.h"
+extern volatile uint32_t ulRuntimeStatsCounter;
+extern volatile uint32_t ulLastPortFValue;
 
-extern TaskHandle_t xCANTaskHandle;
+void DebugHelperInit( void );
+void vSetupTimerForRunTimeStats( void );
 
-extern uint32_t CANTaskInit(void);
-
-#endif // __CAN_TASK_H__
+#endif // __TEST_HELPER_H__

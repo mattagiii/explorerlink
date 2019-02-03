@@ -1,8 +1,25 @@
 /*
  * modem_uart_task.c
+ * FreeRTOS task for communicating with the SIM5320 modem, ISR for the UART
+ * module, and private helper functions for sending and responding to AT
+ * commands.
  *
- *  Created on: Apr 23, 2018
- *      Author: Matt
+ * Copyright 2018, 2019 Matt Rounds
+ *
+ * This file is part of ExplorerLink.
+ *
+ * ExplorerLink is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * ExplorerLink is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * ExplorerLink. If not, see <https://www.gnu.org/licenses/>.
  */
 
 
@@ -26,6 +43,7 @@
 #include "driverlib/uart.h"
 #include "utils/uartstdio.h"
 #include "channel.h"
+#include "debug_helper.h"
 #include "hibernate_rtc.h"
 #include "modem_commands.h"
 #include "modem_mgmt_task.h"
@@ -35,7 +53,6 @@
 #include "ring_buffer.h"
 #include "sample.h"
 #include "stack_sizes.h"
-#include "test_helper.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"

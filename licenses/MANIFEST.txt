@@ -1,0 +1,11 @@
+The source files for ExplorerLink are distributed under more than one license. 
+This manifest lists the location of the applicable licenses and the files they 
+apply to. All source files also contain license notifications.
+
+File(s):            ../FreeRTOSConfig.h
+License:            GNU GPL v2 with linking exception
+License Location:   ./FreeRTOS/license.txt
+
+File(s):            ALL NOT LISTED ABOVE
+License:            GNU GPL v3
+License Location:   ./ExplorerLink/license.txt

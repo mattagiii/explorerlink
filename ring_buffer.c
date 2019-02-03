@@ -1,14 +1,35 @@
 /*
  * ring_buffer.c
+ * A simple ring buffer implementation capable of multi-byte read/write and
+ * peeking.
  *
- *  Created on: Apr 27, 2018
- *      Author: Matt
+ * Copyright 2018, 2019 Matt Rounds
+ *
+ * This file is part of ExplorerLink.
+ *
+ * ExplorerLink is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * ExplorerLink is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * ExplorerLink. If not, see <https://www.gnu.org/licenses/>.
  */
+
 
 #include <stdbool.h>
 #include <stdint.h>
 #include "ring_buffer.h"
 
+
+/*
+ * Get the status (empty, full, or partially filled) for a ring buffer.
+ */
 RingBufferStatus_t eRingBufferStatus(volatile RingBuffer_t *pxBuffer) {
 
     if (pxBuffer->ulReadIndex == pxBuffer->ulWriteIndex) {
@@ -46,6 +67,9 @@ RingBufferStatus_t eRingBufferRead(volatile RingBuffer_t *pxBuffer,
     return BUFFER_OK;
 }
 
+/*
+ * Read an arbitrary number of bytes from a given buffer.
+ */
 RingBufferStatus_t eRingBufferReadN(volatile RingBuffer_t *pxBuffer,
                                     uint8_t *pucBytes, uint32_t ulNBytes) {
     while (ulNBytes--) {
@@ -98,10 +122,17 @@ RingBufferStatus_t eRingBufferWriteN(volatile RingBuffer_t *pxBuffer,
     return BUFFER_OK;
 }
 
+/*
+ * Clear a ring buffer. This is a reset of read/write indices and does not
+ * imply erasure of garbage data in memory.
+ */
 void vRingBufferClear(volatile RingBuffer_t *pxBuffer) {
     pxBuffer->ulReadIndex = pxBuffer->ulWriteIndex;
 }
 
+/*
+ * Get the data from the current read index without incrementing it.
+ */
 RingBufferStatus_t xRingBufferPeek(volatile RingBuffer_t *pxBuffer,
                                    uint8_t *pucByte) {
     uint32_t ulWriteIndexTemp = pxBuffer->ulWriteIndex;

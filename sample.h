@@ -1,8 +1,23 @@
 /*
  * sample.h
+ * Sample ring buffer typedefs and declarations.
  *
- *  Created on: May 14, 2018
- *      Author: Matt
+ * Copyright 2018, 2019 Matt Rounds
+ *
+ * This file is part of ExplorerLink.
+ *
+ * ExplorerLink is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * ExplorerLink is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * ExplorerLink. If not, see <https://www.gnu.org/licenses/>.
  */
 
 #ifndef SAMPLE_H_
@@ -20,6 +35,16 @@
  * adequate for buffering sampled data until it is transmitted to the
  * server and may accommodate multiple samples. */
 #define SAMPLE_BUFFER_SIZE              128
+
+
+typedef enum {
+    RATE_1HZ = 1,
+    RATE_10HZ = 10,
+    RATE_50HZ = 50,
+    RATE_100HZ = 100,
+    RATE_500HZ = 500,
+    RATE_1000HZ = 1000
+} SampleRateHz_t;
 
 typedef struct {
     /* A ring buffer that can hold the most recently acquired

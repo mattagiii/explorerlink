@@ -1,4 +1,25 @@
 /*
+ * FreeRTOSConfig.h
+ * Modified configuration header file defining constants and macros for use by
+ * the FreeRTOS kernel in the ExplorerLink software. Modifications to the
+ * original version of this file (as distributed by Real Time Engineers Ltd)
+ * include the values of all constants and macros, and the comments, within the
+ * "Application specific definitions" section below.
+ *
+ * Modifications copyright 2018, 2019 Matt Rounds
+ *
+ * This file is part of ExplorerLink, which is licensed under the GNU General
+ * Public License, version 3. However it was originally distributed as part of
+ * FreeRTOS, which is licensed under the GNU General Public License, version 2,
+ * with a linking exception.
+ *
+ * The original copyright notice is therefore retained below, and the original
+ * license, as distributed by Real Time Engineers Ltd with FreeRTOS, is
+ * distributed with ExplorerLink in the Licenses directory.
+ */
+
+
+/*
     FreeRTOS V7.0.2 - Copyright (C) 2011 Real Time Engineers Ltd.
 
 
@@ -67,7 +88,6 @@
  *----------------------------------------------------------*/
 
 #define configUSE_PREEMPTION                1
-/* seems to work, but disabling unless I need time slicing */
 //#define configUSE_TIME_SLICING              1
 #define configUSE_IDLE_HOOK                 0
 #define configUSE_TICK_HOOK                 0
@@ -135,7 +155,7 @@ to exclude the API function. */
 
 
 /* Contains vSetupTimerForRunTimeStats and ulRuntimeStatsCounter. */
-#include "test_helper.h"
+#include "debug_helper.h"
 
 /* These defines enable runtime statistic gathering for the kernel.
  * vSetupTimerForRunTimeStats and ulRuntimeStatsCounter are defined in

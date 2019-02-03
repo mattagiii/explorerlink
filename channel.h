@@ -1,10 +1,23 @@
-/**
- * @file channel.h
- * \brief Brief description is on this line and also brief description extends to the
- * next line
+/*
+ * channel.h
+ * Channel typedefs and declarations.
  *
- * this should be the detailed description I think
+ * Copyright 2018, 2019 Matt Rounds
  *
+ * This file is part of ExplorerLink.
+ *
+ * ExplorerLink is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * ExplorerLink is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * ExplorerLink. If not, see <https://www.gnu.org/licenses/>.
  */
 
 #ifndef CHANNEL_H_
@@ -21,15 +34,6 @@
 
 #define NT_RS_READY                     0x00000001
 
-
-typedef enum {
-    RATE_1HZ = 1,
-    RATE_10HZ = 10,
-    RATE_50HZ = 50,
-    RATE_100HZ = 100,
-    RATE_500HZ = 500,
-    RATE_1000HZ = 1000
-} SampleRateHz_t;
 
 /* The Channel_t struct represents a measured value from a sensor, CAN bus, or
  * internal/onboard source. The latest value is stored (generally updated by a

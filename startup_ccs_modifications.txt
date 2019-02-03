@@ -1,0 +1,45 @@
+/*
+ * startup_ccs_modifications.txt
+ * A description of modifications to make to TI-provided/generated 
+ * startup_ccs.c file in order to compile ExplorerLink. TI board example files 
+ * fall under TI's 'TI Commercial' license, which does not permit distributing 
+ * any part of the board example code as part of open source software. To 
+ * compile ExplorerLink, create a startup_ccs.c file with the modifications 
+ * listed in this file.
+ * 
+ * Copyright 2018, 2019 Matt Rounds
+ *
+ * This file is part of ExplorerLink.
+ *
+ * ExplorerLink is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * ExplorerLink is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * ExplorerLink. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+Add the following ISR forward declarations to the unmodified startup_ccs.c 
+file. Then, include the ISR function pointers in the vector table.
+
+extern void xPortPendSVHandler(void);
+extern void vPortSVCHandler(void);
+extern void xPortSysTickHandler(void);
+extern void PortBIntHandler(void);
+extern void ADC0SS0IntHandler(void);
+extern void ADC0SS1IntHandler(void);
+extern void CAN0IntHandler(void);
+extern void HibernateIntHandler(void);  /* RTC sampling */
+extern void UART3IntHandler(void);      /* SRF */
+extern void UART6IntHandler(void);      /* modem UART */
+extern void WTimer0AIntHandler(void);   /* JSN */
+extern void WTimer1AIntHandler(void);   /* remote start */
+extern void WTimer2AIntHandler(void);   /* runtime stats */
+extern void WTimer5AIntHandler(void);   /* JSN */
+

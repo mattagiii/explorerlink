@@ -1,8 +1,24 @@
 /*
  * modem_mgmt_task.c
+ * FreeRTOS task that keeps track of heartbeats from the server (via Modem UART
+ * task), and public functions allowing power control of the modem.
  *
- *  Created on: Jun 26, 2018
- *      Author: Matt
+ * Copyright 2018, 2019 Matt Rounds
+ *
+ * This file is part of ExplorerLink.
+ *
+ * ExplorerLink is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * ExplorerLink is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * ExplorerLink. If not, see <https://www.gnu.org/licenses/>.
  */
 
 
@@ -17,13 +33,13 @@
 #include "driverlib/timer.h"
 #include "utils/uartstdio.h"
 #include "channel.h"
+#include "debug_helper.h"
 #include "modem_mgmt_task.h"
 #include "modem_uart_task.h"
 #include "priorities.h"
 #include "remote_start_task.h"
 #include "sample.h"
 #include "stack_sizes.h"
-#include "test_helper.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"

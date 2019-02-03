@@ -1,16 +1,30 @@
 /*
- * explorer_main.h
+ * explorerlink_main.h
  *
- *  Created on: May 10, 2018
- *      Author: Matt
+ * Copyright 2018, 2019 Matt Rounds
+ *
+ * This file is part of ExplorerLink.
+ *
+ * ExplorerLink is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * ExplorerLink is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * ExplorerLink. If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*
  * PROJECT CONVENTIONS
  *
  * - Variable naming
- *      Variables have their return type indicated at the start of the
- *      identifier, using the following format:
+ *      Variables have their type indicated at the start of the identifier,
+ *      using the following format:
  *      - v = void
  *      - b = bool
  *      - c = int8_t
@@ -54,9 +68,9 @@
  *
  */
 
-#ifndef EXPLORER_MAIN_H_
-#define EXPLORER_MAIN_H_
+#ifndef EXPLORERLINK_MAIN_H_
+#define EXPLORERLINK_MAIN_H_
 
 
 
-#endif /* EXPLORER_MAIN_H_ */
+#endif /* EXPLORERLINK_MAIN_H_ */

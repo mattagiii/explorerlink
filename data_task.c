@@ -1,8 +1,24 @@
 /*
  * data_task.c
+ * A somewhat dispensable task for monitoring data sampling, and an
+ * indispensable ISR that performs data sampling.
  *
- *  Created on: May 10, 2018
- *      Author: Matt
+ * Copyright 2018, 2019 Matt Rounds
+ *
+ * This file is part of ExplorerLink.
+ *
+ * ExplorerLink is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * ExplorerLink is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * ExplorerLink. If not, see <https://www.gnu.org/licenses/>.
  */
 
 
@@ -21,12 +37,12 @@
 #include "driverlib/sysctl.h"
 #include "utils/uartstdio.h"
 #include "channel.h"
+#include "debug_helper.h"
 #include "hibernate_rtc.h"
 #include "modem_uart_task.h"
 #include "priorities.h"
 #include "sample.h"
 #include "stack_sizes.h"
-#include "test_helper.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
@@ -188,8 +204,15 @@ HibernateIntHandler(void) {
     portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
-static void
-DataTask(void *pvParameters) {
+/*
+ * This task doesn't do a lot in its current state; it merely verifies that
+ * sampling is always occurring, which is marginally useful outside the context
+ * of debugging. A future implementation might optimize the hibernate ISR by
+ * deferring some of the sampling work to this task, but currently it isn't
+ * known if the memory penalty that would cause is worth the speed advantage
+ * for the ISR.
+ */
+static void DataTask(void *pvParameters) {
     uint32_t ulS;
     uint32_t ulMatchS;
 
