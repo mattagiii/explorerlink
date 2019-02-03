@@ -38,8 +38,5 @@ extern void CAN0IntHandler(void);
 extern void HibernateIntHandler(void);  /* RTC sampling */
 extern void UART3IntHandler(void);      /* SRF */
 extern void UART6IntHandler(void);      /* modem UART */
-extern void WTimer0AIntHandler(void);   /* JSN */
 extern void WTimer1AIntHandler(void);   /* remote start */
-extern void WTimer2AIntHandler(void);   /* runtime stats */
-extern void WTimer5AIntHandler(void);   /* JSN */
 
