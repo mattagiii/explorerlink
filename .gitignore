@@ -1,8 +1,10 @@
 # Code Composer Studio files to ignore
-.launches
-.settings
-Debug
-utils
+.launches/
+.settings/
+Debug/
+Release/
+third_party/
+utils/
 .ccsproject
 .cproject
 .project
