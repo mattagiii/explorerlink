@@ -32,6 +32,7 @@
 #include "semphr.h"
 
 
+/* Notification channel bit indicating the status of the remote start system */
 #define NT_RS_READY                     0x00000001
 
 

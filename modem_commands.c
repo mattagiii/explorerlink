@@ -24,26 +24,23 @@
 #include <stdint.h>
 #include "modem_commands.h"
 
+
 /*
  * Common responses
  */
 const ModemResponse_t rspOK = {.pucData = "OK\r\n",};
 const ModemResponse_t rspERROR = {.pucData = "ERROR\r\n",};
 
-
 /*
  * Commands, grouped with their responses
  */
 const ModemCommand_t cmdAT = {.pucData = "AT\r\n",};
 
-
 const ModemCommand_t cmdATE0 = {.pucData = "ATE0\r\n",};
 const ModemResponse_t rspATE0Echo = {.pucData = "ATE0\r\r\n",};
 
-
 const ModemCommand_t cmdATCCLK = {.pucData = "AT+CCLK?\r\n",};
 const ModemResponse_t rspATCCLK = {.pucData = "+CCLK: ", .ulCheckLength = 7};
-
 
 const ModemCommand_t cmdATCBC = {.pucData = "AT+CBC\r\n",};
 const ModemResponse_t rspATCBC = {.pucData = "+CBC: ", .ulCheckLength = 6};
@@ -61,7 +58,6 @@ const ModemCommand_t cmdATCIPMODE1 = {.pucData = "AT+CIPMODE=1\r\n",};
 const ModemCommand_t cmdATNETOPENQuery = {.pucData = "AT+NETOPEN?\r\n",};
 const ModemResponse_t rspATNETOPENTrue = {.pucData = "+NETOPEN: 1,", .ulCheckLength = 12};
 const ModemResponse_t rspATNETOPENFalse = {.pucData = "+NETOPEN: 0,", .ulCheckLength = 12};
-
 
 const ModemCommand_t cmdATNETOPEN = {.pucData = "AT+NETOPEN\r\n",};
 const ModemResponse_t rspATNETOPENSuccess = {.pucData = "+NETOPEN: 0\r\n",};

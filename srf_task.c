@@ -53,14 +53,13 @@ TaskHandle_t xSRFTaskHandle;
 /*
  * The UART3 ISR notifies the SRF task when data arrives.
  */
-void
-UART3IntHandler(void) {
+void UART3IntHandler(void) {
     uint32_t ulStatus;
     uint32_t ulRxVal = 0;
     int32_t lByteCount = 2;
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
-    GPIOPinWrite( GPIO_PORTF_BASE, UINT32_MAX, 17);
+    debug_set_bus( 17 );
 
     // Read the (masked) interrupt status of the UART.
     ulStatus = UARTIntStatus(UART3_BASE, 1);
@@ -125,7 +124,7 @@ UART3IntHandler(void) {
 
     }
 
-    GPIOPinWrite( GPIO_PORTF_BASE, UINT32_MAX, ulLastPortFValue );
+    debug_set_bus( LAST_PORT_F_VALUE );
 
     /* If a notification was sent, xHigherPriorityTaskWoken may be set to
      * pdTRUE and if so, this call will tell the scheduler to switch context to
@@ -138,8 +137,7 @@ UART3IntHandler(void) {
  * ensures the TX FIFO is empty whenever this is called, so false is returned
  * to indicate an error if there is existing data being transmitted already.
  */
-static bool
-UART3Send(uint32_t ulAddress, uint32_t ulCmd) {
+static bool UART3Send(uint32_t ulAddress, uint32_t ulCmd) {
 
     /* Ensure that the FIFO is currently empty. */
     if (!UARTBusy(UART3_BASE)) {
@@ -160,8 +158,7 @@ UART3Send(uint32_t ulAddress, uint32_t ulCmd) {
  * commands are sent. This task effectively maintains a state machine to
  * achieve that timing.
  */
-static void
-SRFTask(void *pvParameters) {
+static void SRFTask(void *pvParameters) {
     uint32_t ulNotificationValue = 0;
     uint32_t ulDistUS;
     uint32_t ulDistCM;
@@ -172,7 +169,7 @@ SRFTask(void *pvParameters) {
 
         UART3Send(0x00000000, 0x00000055);
 
-        /* Await a notification from either the UART ISR or another task.
+        /* Await a notification from the UART ISR.
          * The first param clears any bits that are set already, but only
          * if there is no notification pending. The second param clears
          * all bits again on exit. */
@@ -180,23 +177,22 @@ SRFTask(void *pvParameters) {
                         &ulNotificationValue, portMAX_DELAY);
 
         if (ulNotificationValue & SRF_NOTIFY_ERROR) {
-            UARTprintf("UART3 error\n");
+            debug_print("UART3 error\n");
         }
         else {
             ulDistUS = ulNotificationValue & SRF_NOTIFY_DATA_MASK;
             ulDistCM = (uint32_t)(0.017 * (float)ulDistUS);
             ulDistFT = (float)ulDistCM / 30.48;
-//            UARTprintf("SRF reading: %d cm\n", ulDistCM);
+//            debug_print("SRF reading: %d cm\n", ulDistCM);
             vChannelStore(&chTestDist1, &ulDistCM);
         }
-    }
+    } /* while (1) */
 }
 
 /*
  * Configures UART3 for operation on pins PC6 (RX) and PC7 (TX).
  */
-static void
-UART3Configure(void) {
+static void UART3Configure(void) {
 
     /* Enable peripheral clocks */
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOC);
@@ -228,9 +224,8 @@ UART3Configure(void) {
  * Initializes the SRF task by configuring the hardware and creating the task
  * from its function.
  */
-uint32_t
-SRFTaskInit(void) {
-    /* Configure pins and configure UART3 for 8-n-1 operation at 115200 baud. */
+uint32_t SRFTaskInit(void) {
+    /* Configure pins and configure UART3 for 8-n-2 operation at 9600 baud. */
     UART3Configure();
 
     /* Create the SRF task. */

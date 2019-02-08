@@ -93,6 +93,8 @@
 /* Command byte for simultaneously updating the CODE and DAC registers. The
  * bottom 4 bits should be ORed with DAC selection bits. */
 #define MAX5815_CMD_CODEN_LOADN         0x00000030
+/* The number of ms we wait to consider an I2C transmission failed */
+#define I2C_TIMEOUT_MS                  5
 
 /* DAC selection values for use in MAX5815 commands. */
 typedef enum {
@@ -106,12 +108,13 @@ typedef enum {
 
 TaskHandle_t xAnalogTaskHandle;
 
-bool g_abnormalInterval0 = false;
-uint32_t g_ulIntervalBetweenSamples0;
-bool g_abnormalInterval1 = false;
-uint32_t g_ulIntervalBetweenSamples1;
 
+/*
+ * Interrupt handler for ADC0 sample sequencer 0, triggered by PWM0
+ * generator 0 at 20Hz.
+ */
 void ADC0SS0IntHandler( void ) {
+    /* Interrupt status bits */
     uint32_t ulStatus;
     /* Number of new samples retrieved from the FIFO by ADCSequenceDataGet() */
     uint32_t ulSampleCount;
@@ -124,16 +127,8 @@ void ADC0SS0IntHandler( void ) {
     static uint32_t ulAVTEMP3AvgSum;
     static uint32_t ulAVTEMP4AvgSum;
     static uint32_t ul5xAvgCount = 0;
-    static uint32_t ulRuntimeStatsLast = 0;
 
-    GPIOPinWrite( GPIO_PORTF_BASE, UINT32_MAX, 2 );
-
-    if ( ulRuntimeStatsCounter - ulRuntimeStatsLast > 501 && !g_abnormalInterval0 ) {
-        g_ulIntervalBetweenSamples0 = ulRuntimeStatsCounter - ulRuntimeStatsLast;
-        g_abnormalInterval0 = true;
-    }
-    ulRuntimeStatsLast = ulRuntimeStatsCounter;
-
+    debug_set_bus( 2 );
 
     /* Read the masked interrupt status of the ADC module. */
     ulStatus = ADCIntStatus( ADC0_BASE, 0, true );
@@ -177,26 +172,23 @@ void ADC0SS0IntHandler( void ) {
         /* Error. Samples were not read from the FIFO in time. */
     }
 
-    GPIOPinWrite( GPIO_PORTF_BASE, UINT32_MAX, ulLastPortFValue );
+    debug_set_bus( LAST_PORT_F_VALUE );
 }
 
+/*
+ * Interrupt handler for ADC0 sample sequencer 1, triggered by PWM0
+ * generator 1 at 1000Hz.
+ */
 void ADC0SS1IntHandler( void ) {
+    /* Interrupt status bits */
     uint32_t ulStatus;
     /* Number of new samples retrieved from the FIFO by ADCSequenceDataGet() */
     uint32_t ulSampleCount;
     /* Buffer for the values read from the sequencer's FIFO. SS1 has FIFO size
      * 4. */
     uint32_t pulADC0SS1Values[4];
-    static uint32_t ulRuntimeStatsLast = 0;
 
-    GPIOPinWrite( GPIO_PORTF_BASE, UINT32_MAX, 2);                               //
-
-    if ( ulRuntimeStatsCounter - ulRuntimeStatsLast > 11 && !g_abnormalInterval1 ) {
-        g_ulIntervalBetweenSamples1 = ulRuntimeStatsCounter - ulRuntimeStatsLast;
-        g_abnormalInterval1 = true;
-    }
-    ulRuntimeStatsLast = ulRuntimeStatsCounter;
-
+    debug_set_bus( 2 );
 
     /* Read the masked interrupt status of the ADC module. */
     ulStatus = ADCIntStatus( ADC0_BASE, 1, true );
@@ -214,13 +206,18 @@ void ADC0SS1IntHandler( void ) {
         /* Error. Samples were not read from the FIFO in time. */
     }
 
-    GPIOPinWrite( GPIO_PORTF_BASE, UINT32_MAX, ulLastPortFValue );
+    debug_set_bus( LAST_PORT_F_VALUE );
 }
 
-static void MAX5815Send( uint8_t ucCommand, uint8_t ucData1, uint8_t ucData2 ) {
-
-    /* The MAX5815 command format includes three I2C data bytes: a command byte
-     * followed by two bytes of data, which usually contain 12-bit DAC codes. */
+/*
+ * Sends a command to the MAX5815 via I2C. The MAX5815 command format includes
+ * three I2C data bytes: a command byte followed by two bytes of data, which
+ * usually contain 12-bit DAC codes.
+ */
+static bool MAX5815Send( uint8_t ucCommand, uint8_t ucData1, uint8_t ucData2 ) {
+    /* Used to count the amount of time spent waiting for the I2C peripheral
+     * while it is busy transmitting. */
+    int32_t lBusyTimeoutMS = I2C_TIMEOUT_MS;
 
     /* Load the command byte into I2CMDR. */
     I2CMasterDataPut( I2C2_BASE, ucCommand );
@@ -228,31 +225,65 @@ static void MAX5815Send( uint8_t ucCommand, uint8_t ucData1, uint8_t ucData2 ) {
      * address in I2CMSA followed by the data in I2CMDR. */
     I2CMasterControl( I2C2_BASE, I2C_MASTER_CMD_BURST_SEND_START );
     /* Wait for the peripheral to finish the transmission before proceeding.
-     * This is indeed a busy-wait, but due to the infrequency of transmissions
-     * and the low priority of the Analog task, it is acceptable. */
-    while( I2CMasterBusy( I2C2_BASE ) ) {}
+     * Using a task delay allows other tasks to run in the meantime.
+     * TODO: Test the timeout value and reduce if possible. */
+    while( I2CMasterBusy( I2C2_BASE ) && --lBusyTimeoutMS > 0 ) {
+        vTaskDelay( pdMS_TO_TICKS( 1 ) );
+    }
+
+    /* Return immediately if the bus timed out. */
+    if ( lBusyTimeoutMS <= 0 ) {
+        return false;
+    }
+
+    /* Reset the count. */
+    lBusyTimeoutMS = I2C_TIMEOUT_MS;
 
     /* Load the first data byte into I2CMDR. */
     I2CMasterDataPut( I2C2_BASE, ucData1 );
     /* Instruct the peripheral to output the data in I2CMDR only. */
     I2CMasterControl( I2C2_BASE, I2C_MASTER_CMD_BURST_SEND_CONT );
-    while( I2CMasterBusy( I2C2_BASE ) ) {}
+    while( I2CMasterBusy( I2C2_BASE ) && --lBusyTimeoutMS > 0 ) {
+        vTaskDelay( pdMS_TO_TICKS( 1 ) );
+    }
 
-    /* Load the first data byte into I2CMDR. */
+    if ( lBusyTimeoutMS <= 0 ) {
+        return false;
+    }
+
+    lBusyTimeoutMS = I2C_TIMEOUT_MS;
+
+    /* Load the second data byte into I2CMDR. */
     I2CMasterDataPut( I2C2_BASE, ucData2 );
     /* Instruct the peripheral to output the data in I2CMDR, followed by a STOP
      * condition. */
     I2CMasterControl( I2C2_BASE, I2C_MASTER_CMD_BURST_SEND_FINISH );
-    while( I2CMasterBusy( I2C2_BASE ) ) {}
+    while( I2CMasterBusy( I2C2_BASE ) && --lBusyTimeoutMS > 0 ) {
+        vTaskDelay( pdMS_TO_TICKS( 1 ) );
+    }
+
+    if ( lBusyTimeoutMS <= 0 ) {
+        return false;
+    }
+
+    return true;
 }
 
-static void MAX5815SetREF() {
+/*
+ * Sends the command to set the MAX5815's internal reference to 2.5V.
+ */
+static bool MAX5815SetREF() {
 
     /* Send a command to set the internal reference. Data bytes are don't
      * cares. */
-    MAX5815Send( ( uint8_t ) ( MAX5815_CMD_REF_2V5 ), 0, 0 );
+    return MAX5815Send( ( uint8_t ) ( MAX5815_CMD_REF_2V5 ), 0, 0 );
 }
 
+/*
+ * Sends a command that updates the CODE and DAC registers for one or more of
+ * the 4 DAC outputs. ulCode is the DAC code; it is split into two separate
+ * bytes before being transmitted via the generic MAX5815Send() function.
+ */
 static bool MAX5815SetDAC( MAX5815DACSelection_t ulSelectedDACs,
                            uint32_t ulCode ) {
 
@@ -262,10 +293,10 @@ static bool MAX5815SetDAC( MAX5815DACSelection_t ulSelectedDACs,
 
     /* Send a command to update the CODE and DAC registers. Note the
      * truncation of ulCode prior to the shift in the third parameter. */
-    MAX5815Send( ( uint8_t ) ( MAX5815_CMD_CODEN_LOADN | ulSelectedDACs ),
-                 ( uint8_t ) ( ulCode >> 4 ), ( ( uint8_t ) ulCode ) << 4 );
-
-    return true;
+    return MAX5815Send(
+            ( uint8_t ) ( MAX5815_CMD_CODEN_LOADN | ulSelectedDACs ),
+            ( uint8_t ) ( ulCode >> 4 ), ( ( uint8_t ) ulCode ) << 4
+            );
 }
 
 /*
@@ -345,7 +376,12 @@ static void AnalogTask( void *pvParameters ) {
     /* lControl bounded to allowable DAC code values */
     uint32_t ulControl;
 
-    MAX5815SetREF();
+    /* Set the MAX5815's reference to the 2.5V internal reference. If false is
+     * returned, delay indefinitely. */
+    if ( !MAX5815SetREF() ) {
+        debug_print("I2C disconnected. Analog task inactive.\n");
+        vTaskDelay( portMAX_DELAY );
+    }
 
     /* Main task loop. This loop runs a PI control algorithm at a
      * 1-second interval. The algorithm uses the desired and current cabin
@@ -401,48 +437,21 @@ static void AnalogTask( void *pvParameters ) {
             ulControl = lControl;
         }
 
-        /* Send the command to update the DAC output. */
-        MAX5815SetDAC( MAX5815_DAC_A, ulControl );
-
-        if ( g_abnormalInterval0 ) {
-//            UARTprintf( "abnormal interval: %d\n", g_ulIntervalBetweenSamples );
-            g_abnormalInterval0 = false;
-        }
-
-        if ( g_abnormalInterval1 ) {
-//            UARTprintf( "abnormal interval: %d\n", g_ulIntervalBetweenSamples );
-            g_abnormalInterval1 = false;
+        /* Send the command to update the DAC output. If false is returned,
+         * delay indefinitely. */
+        if ( !MAX5815SetDAC( MAX5815_DAC_A, ulControl ) ) {
+            debug_print("I2C disconnected. Analog task inactive.\n");
+            vTaskDelay( portMAX_DELAY );
         }
 
     }
 }
 
-//static void
-//ADCTimerConfigure(void) {
-//
-//    /* Enable clocking for Timer 0. */
-//    SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER0);
-//
-//    /* Configure Timer 0 such that its A-half will count periodically. */
-//    TimerConfigure(TIMER0_BASE, TIMER_CFG_SPLIT_PAIR | TIMER_CFG_A_PERIODIC);
-//
-//    /* Configure Timer 0A to send a trigger to the ADC when it interrupts. */
-//    TimerControlTrigger(TIMER0_BASE, TIMER_A, true);
-//
-//    /* Each timer increment will take 10 clock cycles (at 80MHz, this will be
-//     * 125ns). */
-//    TimerPrescaleSet(TIMER0_BASE, TIMER_A, 9);
-//
-//    /* Configure Timer 0A's load value to 1ms. At 80MHz, this will be a load
-//     * value of 8000 (8000 * 125ns = 1ms). */
-//    TimerLoadSet(TIMER0_BASE, TIMER_A, 8000);
-//
-//    /* Begin counting. */
-//    TimerEnable(TIMER0_BASE, TIMER_A);
-//}
-
-static void
-PWMADCTriggerConfigure( void ) {
+/*
+ * Configure PWM module 0 with two generators at 20Hz and 1000Hz to serve as
+ * triggers for ADC sampling.
+ */
+static void PWMADCTriggerConfigure( void ) {
 
     /* Enable clocking for PWM module 0. */
     SysCtlPeripheralEnable( SYSCTL_PERIPH_PWM0 );
@@ -483,8 +492,13 @@ PWMADCTriggerConfigure( void ) {
     PWMGenEnable(PWM0_BASE, PWM_GEN_1);
 }
 
-static void
-ADC0Configure( void ) {
+/*
+ * Configure ADC0 sample sequencers 0 and 1 to be triggered by PWM module 0
+ * generators 0 and 1, respectively. Also configure the necessary GPIO pins
+ * for our analog inputs and give sequencer 1 higher priority. ADC0 is also
+ * set to use hardware dithering and 64x hardware oversampling.
+ */
+static void ADC0Configure( void ) {
 
     /* Enable clocking for the ADC peripheral. */
     SysCtlPeripheralEnable( SYSCTL_PERIPH_ADC0 );
@@ -512,7 +526,6 @@ ADC0Configure( void ) {
     /* Configure sample sequence 0 on ADC0 for PWM-triggered sampling from
      * module 0 generator 0. Priority 1 (second highest) is given to this
      * sequence. */
-//    ADCSequenceConfigure( ADC0_BASE, 0, ADC_TRIGGER_TIMER, 0 );
     ADCSequenceConfigure( ADC0_BASE, 0,
                           ADC_TRIGGER_PWM_MOD0 | ADC_TRIGGER_PWM0, 1 );
 
@@ -553,7 +566,6 @@ ADC0Configure( void ) {
 
     /* Configure sample sequence 1 on ADC0 for PWM-triggered sampling from
      * module 0 generator 1. Priority 0 (highest) is given to this sequence. */
-//    ADCSequenceConfigure( ADC0_BASE, 1, ADC_TRIGGER_TIMER, 0 );
     ADCSequenceConfigure( ADC0_BASE, 1,
                           ADC_TRIGGER_PWM_MOD0 | ADC_TRIGGER_PWM1, 0 );
 
@@ -577,48 +589,47 @@ ADC0Configure( void ) {
     IntEnable( INT_ADC0SS1 );
 }
 
+/*
+ * Enable I2C module 2 for communication with the DAC on PE4 (SCL) and PE5
+ * (SDA). The module is configured as a master at 400kbps and given a fixed
+ * slave address to communicate to.
+ */
 static void DACI2CConfigure( void ) {
 
     /* Enable clocking for the I2C peripheral. */
-//    SysCtlPeripheralEnable( SYSCTL_PERIPH_I2C1 );
     SysCtlPeripheralEnable( SYSCTL_PERIPH_I2C2 );
 
     /* Wait for the module to become ready. */
-//    while( !SysCtlPeripheralReady( SYSCTL_PERIPH_I2C1 ) ) {}
     while( !SysCtlPeripheralReady( SYSCTL_PERIPH_I2C2 ) ) {}
 
     /* Enable the GPIO port with I2C pins we are using. */
-//    SysCtlPeripheralEnable( SYSCTL_PERIPH_GPIOA );
     SysCtlPeripheralEnable( SYSCTL_PERIPH_GPIOE );
 
     /* Configure pin mux for PA6 and PA7. */
-//    GPIOPinConfigure( GPIO_PA6_I2C1SCL );
-//    GPIOPinConfigure( GPIO_PA7_I2C1SDA );
     GPIOPinConfigure( GPIO_PE4_I2C2SCL );
     GPIOPinConfigure( GPIO_PE5_I2C2SDA );
 
     /* Configure GPIO pads for I2C. PA6 is push-pull, PA7 is open-drain, and
      * both have peripheral-controlled direction. */
-//    GPIOPinTypeI2CSCL( GPIO_PORTA_BASE, GPIO_PIN_6 );
-//    GPIOPinTypeI2C( GPIO_PORTA_BASE, GPIO_PIN_7 );
     GPIOPinTypeI2CSCL( GPIO_PORTE_BASE, GPIO_PIN_4 );
     GPIOPinTypeI2C( GPIO_PORTE_BASE, GPIO_PIN_5 );
 
     /* Enable I2C1 as a master, calculate the I2CMTPR value based on the system
      * clock and a 400kbps bus. */
-//    I2CMasterInitExpClk( I2C1_BASE, SysCtlClockGet(), true );
     I2CMasterInitExpClk( I2C2_BASE, SysCtlClockGet(), true );
 
     /* We'll only be talking to one slave (MAX5815), and only sending, so we
      * set the slave address right away. false = send. */
-//    I2CMasterSlaveAddrSet( I2C1_BASE, MAX5815_ADDR, false );
     I2CMasterSlaveAddrSet( I2C2_BASE, MAX5815_ADDR, false );
 }
 
+/*
+ * Initializes the Analog task by setting up ADC sampling and I2C communication
+ * with the DAC. Then registers the task function with the kernel.
+ */
 uint32_t AnalogTaskInit( void ) {
 
     ADC0Configure();
-//    ADCTimerConfigure();
     PWMADCTriggerConfigure();
 
     DACI2CConfigure();

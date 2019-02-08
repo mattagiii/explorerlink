@@ -99,7 +99,7 @@ HibernateIntHandler(void) {
     UBaseType_t uxSavedInterruptStatus;
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
-    GPIOPinWrite( GPIO_PORTF_BASE, UINT32_MAX, 6);
+    debug_set_bus( 6 );
 
     /* Ensure write completion before accessing hibernate registers. */
     HibernateWriteComplete();
@@ -193,10 +193,10 @@ HibernateIntHandler(void) {
     } /* if (ulStatus == HIBERNATE_INT_RTC_MATCH_0) */
     else {
         /* No other interrupts should occur, so this should never be reached. */
-        UARTprintf("unexpected HIB interrupt: %d\n", ulStatus);
+        debug_print("unexpected HIB interrupt: %d\n", ulStatus);
     }
 
-    GPIOPinWrite( GPIO_PORTF_BASE, UINT32_MAX, ulLastPortFValue );
+    debug_set_bus( LAST_PORT_F_VALUE );
 
     /* If the notification brought the Modem UART task to the ready state,
      * xHigherPriorityTaskWoken will be set to pdTRUE and this call will tell
@@ -215,12 +215,6 @@ HibernateIntHandler(void) {
 static void DataTask(void *pvParameters) {
     uint32_t ulS;
     uint32_t ulMatchS;
-
-    // Debug definitions
-//    UBaseType_t uxDataTaskWatermark;
-    volatile UBaseType_t uxArraySize;
-    TaskStatus_t pxTaskStatusArray[ 8 ];
-    uint32_t ulTotalRunTime;
 
     /* Main task loop. The hibernate interrupt does all the sampling work, so
      * the task's only job is to periodically check that sampling is still
@@ -248,8 +242,8 @@ static void DataTask(void *pvParameters) {
 
             if (ulS > ulMatchS) {
 
-                UARTprintf("RTC interrupts fell out of sync.\n");
-                UARTprintf("adjusting match: %d to %d\n", ulMatchS, ulS + 2);
+                debug_print("RTC interrupts fell out of sync.\n");
+                debug_print("adjusting match: %d to %d\n", ulMatchS, ulS + 2);
 
                 /* The hibernate module is a bit buggy on the TM4C (see the
                  * errata document), so to be extra safe we disable the RTC
@@ -265,27 +259,6 @@ static void DataTask(void *pvParameters) {
             /* Re-enable hibernate interrupts at the NVIC. */
             IntEnable(INT_HIBERNATE);
         }
-
-//        UARTprintf("task | min free / total (words)\n");
-//        UARTprintf("analog:      %d / %d\n", uxTaskGetStackHighWaterMark(xAnalogTaskHandle), ANALOGTASKSTACKSIZE);
-//        UARTprintf("CAN:         %d / %d\n", uxTaskGetStackHighWaterMark(xCANTaskHandle), CANTASKSTACKSIZE);
-//        UARTprintf("data:        %d / %d\n", uxTaskGetStackHighWaterMark(NULL), DATATASKSTACKSIZE);
-//        UARTprintf("jsn:         %d / %d\n", uxTaskGetStackHighWaterMark(xJSNTaskHandle), JSNTASKSTACKSIZE);
-//        UARTprintf("modem mgmt:  %d / %d\n", uxTaskGetStackHighWaterMark(xModemMgmtTaskHandle), MODEMMGMTTASKSTACKSIZE);
-//        UARTprintf("modem uart:  %d / %d\n", uxTaskGetStackHighWaterMark(xModemUARTTaskHandle), MODEMUARTTASKSTACKSIZE);
-//        UARTprintf("remote:      %d / %d\n", uxTaskGetStackHighWaterMark(xRemoteStartTaskHandle), REMOTESTARTTASKSTACKSIZE);
-//        UARTprintf("srf:         %d / %d\n", uxTaskGetStackHighWaterMark(xSRFTaskHandle), SRFTASKSTACKSIZE);
-//        UARTprintf("free heap:   %d bytes / %d total\n\n", xPortGetFreeHeapSize(), configTOTAL_HEAP_SIZE);
-
-//        UARTprintf("srf: %d \n", *((uint32_t *)(chTestDist1.xData)));
-
-//        UARTprintf("device: %u \n", HibernateRTCGetS());
-
-//        uxArraySize = uxTaskGetSystemState( pxTaskStatusArray,
-//                                            uxArraySize,
-//                                            &ulTotalRunTime );
-
-//        UARTprintf("%s\n", pcRuntimeStats);
 
         /* Run this check every second. */
         vTaskDelay(pdMS_TO_TICKS(1000));
@@ -320,10 +293,6 @@ RTCConfigure(void) {
 
     /* Enable clocking for the hibernate module. */
     HibernateEnableExpClk(80000000);
-
-    /* Wait for the hibernate peripheral to become ready. */
-//    while(!SysCtlPeripheralReady(SYSCTL_PERIPH_HIBERNATE)) {
-//    }
 
     /* The following two calls are a workaround for silicon erratum HIB#01.
      * These are the default values for the HIBRTCT and HIBIM registers, and

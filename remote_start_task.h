@@ -40,7 +40,7 @@
 
 
 /*
- * Ignition status flags. C99 compilation should fit these into a single byte.
+ * Ignition status flags.
  */
 typedef struct IgnitionStatus_t {
     /* Whether the last attempt to turn on the ignition failed. */

@@ -137,7 +137,7 @@ main(void) {
      * from occurring before the scheduler has started. */
 
     /* Initialize the debug helper. */
-    DebugHelperInit();
+    debug_init();
 
     /* Start the scheduler. This should not return. */
     vTaskStartScheduler();

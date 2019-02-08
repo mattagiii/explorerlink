@@ -33,12 +33,14 @@
 #define SAMPLE_METADATA_BYTES           10
 
 
+/* Just an array of the pointers to sample rate buffers, for iteration */
 SampleRateBuffer_t *pxSampleRateBuffers[] = {
                          &xSampleBuffer1Hz,
                          &xSampleBuffer10Hz,
                          &xSampleBuffer100Hz
 };
 
+/* Sample rate buffer definitions */
 volatile uint8_t puc1HzData[SAMPLE_BUFFER_SIZE];
 SampleRateBuffer_t xSampleBuffer1Hz = {
                     .xData = {
@@ -49,7 +51,6 @@ SampleRateBuffer_t xSampleBuffer1Hz = {
                     },
                     .usSampleRateHz = RATE_1HZ,
 };
-
 volatile uint8_t puc10HzData[SAMPLE_BUFFER_SIZE];
 SampleRateBuffer_t xSampleBuffer10Hz = {
                     .xData = {
@@ -60,7 +61,6 @@ SampleRateBuffer_t xSampleBuffer10Hz = {
                     },
                     .usSampleRateHz = RATE_10HZ,
 };
-
 volatile uint8_t puc100HzData[SAMPLE_BUFFER_SIZE];
 SampleRateBuffer_t xSampleBuffer100Hz = {
                     .xData = {
@@ -72,6 +72,10 @@ SampleRateBuffer_t xSampleBuffer100Hz = {
                     .usSampleRateHz = RATE_100HZ,
 };
 
+
+/*
+ * Get the number of sample rate buffers.
+ */
 uint8_t ucSampleGetBufferCount(void) {
     return ARRAY_LENGTH(pxSampleRateBuffers);
 }

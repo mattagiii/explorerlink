@@ -126,7 +126,7 @@ CAN0IntHandler( void ) {
 
     uint32_t ulStatus;
 
-    GPIOPinWrite( GPIO_PORTF_BASE, UINT32_MAX, 4 );
+    debug_set_bus( 4 );
 
     /* Read the CAN interrupt status to find the cause of the interrupt.
      * CAN_INT_STS_CAUSE register values:
@@ -183,7 +183,7 @@ CAN0IntHandler( void ) {
         // Placeholder for unexpected interrupt handling code
     }
 
-    GPIOPinWrite( GPIO_PORTF_BASE, UINT32_MAX, ulLastPortFValue );
+    debug_set_bus( LAST_PORT_F_VALUE );
 
     /* If data was received, xHigherPriorityTaskWoken may be set to pdTRUE and
      * if so, this call will tell the scheduler to switch context to the
@@ -202,7 +202,7 @@ CANErrorHandler(void) {
     // CAN controller has entered a Bus Off state.
     if(ulErrFlag & CAN_STATUS_BUS_OFF) {
         // Handle Error Condition here
-        UARTprintf("    ERROR: CAN_STATUS_BUS_OFF \n");
+        debug_print("    ERROR: CAN_STATUS_BUS_OFF \n");
 
         // Clear CAN_STATUS_BUS_OFF Flag
         ulErrFlag &= ~(CAN_STATUS_BUS_OFF);
@@ -212,7 +212,7 @@ CANErrorHandler(void) {
     // CAN controller error level has reached warning level.
     if(ulErrFlag & CAN_STATUS_EWARN) {
         // Handle Error Condition here
-        // UARTprintf("    ERROR: CAN_STATUS_EWARN \n");
+        debug_print("    ERROR: CAN_STATUS_EWARN \n");
 
         // Clear CAN_STATUS_EWARN Flag
         ulErrFlag &= ~(CAN_STATUS_EWARN);
@@ -310,7 +310,7 @@ CANErrorHandler(void) {
     // If there are any bits still set in ulErrFlag then something unhandled
     // has happened. Print the value of ulErrFlag.
     if(ulErrFlag !=0) {
-        UARTprintf("    Unhandled ERROR: %x \n", ulErrFlag);
+        debug_print("    Unhandled ERROR: %x \n", ulErrFlag);
     }
 }
 
@@ -349,7 +349,7 @@ static void CANTask( void *pvParameters ) {
             if ( ulNotificationValue & OBJS_IN_USE ) {
 
                 if ( xIgnitionStatus.running == false ) {
-                    UARTprintf( "\nCAN messages started arriving\n" );
+                    debug_print( "\nCAN messages started arriving\n" );
                 }
 
                 /* If a CAN message was received, the ignition is on. */
@@ -377,9 +377,8 @@ static void CANTask( void *pvParameters ) {
                          * must be blocked for long enough that two messages
                          * arrive before the first is read. */
                         if ( xCAN0RxMessage.ui32Flags & MSG_OBJ_DATA_LOST ) {
-//                            UARTprintf( "\nCAN message loss detected\n" );
+                            debug_print( "\nCAN message loss detected\n" );
                             ulCANMsgLossCount++;
-                            GPIOPinWrite( GPIO_PORTF_BASE, UINT32_MAX, 25);
                             /* This flag is not cleared by CANMessageGet(), so
                              * clear it. */
                             xCAN0RxMessage.ui32Flags &= ~MSG_OBJ_DATA_LOST;
@@ -395,7 +394,7 @@ static void CANTask( void *pvParameters ) {
                          * task to execute before it completes processing a
                          * prior message. */
                         if ( !( xCAN0RxMessage.ui32Flags & MSG_OBJ_NEW_DATA ) ) {
-//                            UARTprintf( "\nError: Old data was read from a CAN message object\n" );
+                            debug_print( "\nError: Old data was read from a CAN message object\n" );
                             ulCANOldDataCount++;
                         }
                         else {
@@ -409,7 +408,7 @@ static void CANTask( void *pvParameters ) {
 
             } /* if ( ulNotificationValue & OBJS_IN_USE ) */
             else {
-                UARTprintf( "\nError: Unexpected CAN task notification\n" );
+                debug_print( "\nError: Unexpected CAN task notification\n" );
             }
 
         } /* if ( xTaskNotifyWait( ... ) */
@@ -417,7 +416,7 @@ static void CANTask( void *pvParameters ) {
             /* xTaskNotifyWait timed out. No CAN messages have been received
              * for 100ms. */
             xIgnitionStatus.running = false;
-            UARTprintf( "\nCAN messages stopped arriving\n" );
+            debug_print( "\nCAN messages stopped arriving\n" );
 
             /* After a timeout, set the timeout to the maximum value so that
              * the next xTaskNotifyWait call will block indefinitely until CAN

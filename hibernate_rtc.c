@@ -31,9 +31,6 @@
 #include "inc/hw_types.h"
 
 /*
- * This function is a copy of the _HibernateWriteComplete() function in
- * driverlib/hibernate.h, written by TI.
- *
  * Polls until the write complete (WRC) bit in the hibernate control register
  * is set.
  *
@@ -42,15 +39,15 @@
  * polls this bit and returns as soon as it is set.  At this point, it is safe
  * to perform another write to the module.
  */
-void
-HibernateWriteComplete(void)
+void HibernateWriteComplete(void)
 {
-    /* Spin until the write complete bit is set. */
-    while(!(HWREG(HIB_CTL) & HIB_CTL_WRC))
-    {
+    while( !( HWREG( HIB_CTL ) & HIB_CTL_WRC ) ) {
     }
 }
 
+/*
+ * Get the seconds value from the RTC.
+ */
 uint32_t HibernateRTCGetS(void) {
     uint32_t ulS;
 
@@ -68,6 +65,9 @@ uint32_t HibernateRTCGetS(void) {
     return ulS;
 }
 
+/*
+ * Get the subseconds value from the RTC.
+ */
 uint32_t HibernateRTCGetSS(void) {
     uint32_t ulSS;
 
@@ -85,6 +85,9 @@ uint32_t HibernateRTCGetSS(void) {
     return ulSS & HIB_RTCSS_RTCSSC_M;
 }
 
+/*
+ * Get the subseconds match value from the RTC.
+ */
 uint32_t HibernateRTCGetSSMatch(void) {
     uint32_t ulSSMatch;
 
@@ -102,6 +105,10 @@ uint32_t HibernateRTCGetSSMatch(void) {
     return ulSSMatch >> HIB_RTCSS_RTCSSM_S;
 }
 
+/*
+ * Get the seconds and subseconds value from the RTC. This is the only
+ * way to guarantee an accurate pairing between the two.
+ */
 void HibernateRTCGetBoth(uint32_t *ulS, uint32_t *ulSS) {
     int ulRTC1, ulRTCSS1, ulRTCSS2, ulRTC2;
 

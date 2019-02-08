@@ -35,7 +35,7 @@
 #define MODEM_NOTIFY_ALL                0xffffffff
 
 /*
- * Modem status flags. C99 compilation should fit these into a single byte.
+ * Modem status flags.
  */
 typedef struct ModemStatus_t {
     /* Whether the modem is running (i.e., the PS pin is high). */

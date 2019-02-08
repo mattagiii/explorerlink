@@ -19,7 +19,6 @@ doxygen_config
 Doxyfile
 
 # Custom files to ignore
-debug_helper.*
 jsn_task.*
 
 # Prerequisites

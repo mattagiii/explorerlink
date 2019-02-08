@@ -110,13 +110,15 @@
 #define configMAX_CO_ROUTINE_PRIORITIES     ( 2 )
 #define configQUEUE_REGISTRY_SIZE           10
 
-/* Run time and task stats gathering related definitions. */
+#ifdef DEBUG
+/* Run time and task stats gathering related definitions */
 #define configGENERATE_RUN_TIME_STATS           1
 #define configUSE_TRACE_FACILITY                1
 #define configUSE_STATS_FORMATTING_FUNCTIONS    1
 #define configUSE_APPLICATION_TASK_TAG          1
+#endif /* DEBUG */
 
-/* Define to trap errors during development. */
+/* Define to trap errors */
 #define configASSERT( x ) if( ( x ) == 0 ) { taskDISABLE_INTERRUPTS(); for( ;; ); }
 
 /* Set the following definitions to 1 to include the API function, or zero
@@ -154,7 +156,9 @@ to exclude the API function. */
 #define configMAX_SYSCALL_INTERRUPT_PRIORITY    ( 5 << 5 )
 
 
-/* Contains vSetupTimerForRunTimeStats and ulRuntimeStatsCounter. */
+#ifdef DEBUG
+/* Contains vSetupTimerForRunTimeStats, ulRuntimeStatsCounter, and
+ * ulLastPortFValue */
 #include "debug_helper.h"
 
 /* These defines enable runtime statistic gathering for the kernel.
@@ -163,20 +167,20 @@ to exclude the API function. */
 #define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() vSetupTimerForRunTimeStats()
 #define portGET_RUN_TIME_COUNTER_VALUE()    ulRuntimeStatsCounter
 
-
-/* Contains vSetupTimerForRunTimeStats and ulRuntimeStatsCounter. */
-#include <stdbool.h>
-#include "inc/hw_memmap.h"
-#include "driverlib/gpio.h"
-
 /* Define the traceTASK_SWITCHED_IN() macro to output the GPIO bus value
- * associated with the task being selected to run on port F. */
+ * associated with the task being selected to run on port F. This also
+ * updates the current task tag in ulLastPortFValue so that ISRs can place
+ * their own unique values on the bus and return the value to the correct
+ * (task) value when returning (back to the task the ISR interrupted). */
 #define traceTASK_SWITCHED_IN()                                                \
     ulLastPortFValue = ( uint32_t ) pxCurrentTCB->pxTaskTag;                   \
-    GPIOPinWrite( GPIO_PORTF_BASE, UINT32_MAX, ( uint32_t ) pxCurrentTCB->pxTaskTag );
+    debug_set_bus( ( uint32_t ) pxCurrentTCB->pxTaskTag );
+/* traceTASK_SWITCHED_OUT() returns the bus value to 0, which represents CPU
+ * idle. */
 #define traceTASK_SWITCHED_OUT()                                               \
     ulLastPortFValue = 0;                                                      \
-    GPIOPinWrite( GPIO_PORTF_BASE, UINT32_MAX, 0 );
+    debug_set_bus( 0 );
+#endif /* DEBUG */
 
 
 #endif /* FREERTOS_CONFIG_H */

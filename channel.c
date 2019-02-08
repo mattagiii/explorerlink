@@ -335,7 +335,6 @@ void vChannelStoreCANData(uint32_t ulMsgID, uint8_t *pui8MsgData) {
 
     for (i = 0; i < ucChannelCount; i++) {
         if (xChannels[i]->usCANID == ulMsgID) {
-//            UARTprintf("stored with ID %03X\n", ulMsgID);
             if (xChannels[i]->bReverse) {
                 for (j = 0; j < xChannels[i]->ucByteCount; j++) {
                     memcpy((void *)(xChannels[i]->xData + j), pui8MsgData + xChannels[i]->ucOffset + xChannels[i]->ucByteCount - j - 1, 1);

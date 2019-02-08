@@ -238,10 +238,10 @@ IgnitionOn( void ) {
          * consider this an error condition. */
         if ( xIgnitionStatus.lastOnFailed ) {
             GPIOPinWrite( GPIO_PORTB_BASE, RUN_PIN, 0 );
-            UARTprintf( "Ignition ON failed\n" );
+            debug_print( "Ignition ON failed\n" );
         }
         else {
-            UARTprintf( "Ignition ON succeeded\n" );
+            debug_print( "Ignition ON succeeded\n" );
         }
 
         return !xIgnitionStatus.lastOnFailed;
@@ -251,7 +251,7 @@ IgnitionOn( void ) {
      * but isn't an error. */
     else if ( GPIOPinRead( GPIO_PORTB_BASE, RUN_PIN ) &&
               xIgnitionStatus.running ) {
-        UARTprintf( "Ignition ON unnecessary\n" );
+        debug_print( "Ignition ON unnecessary\n" );
         return true;
     }
     /* If RUN_PIN is high already but the CAN task tells us the ignition isn't
@@ -259,7 +259,7 @@ IgnitionOn( void ) {
      * with the CAN task. Here we self-notify the task of an error so that it
      * will enter the error state before acting on any new commands. */
     else {
-        UARTprintf( "\nError: Ignition ON commanded but current state cannot be determined\n" );
+        debug_print( "\nError: Ignition ON commanded but current state cannot be determined\n" );
         GPIOPinWrite( GPIO_PORTB_BASE, RUN_PIN, 0 );
         xTaskNotify( xRemoteStartTaskHandle, RS_NOTIFY_ERROR, eSetBits );
         return false;
@@ -297,10 +297,10 @@ IgnitionOff( void ) {
                                         true : false;
 
         if ( xIgnitionStatus.lastOffFailed ) {
-            UARTprintf( "Ignition OFF failed\n" );
+            debug_print( "Ignition OFF failed\n" );
         }
         else {
-            UARTprintf( "Ignition OFF succeeded\n" );
+            debug_print( "Ignition OFF succeeded\n" );
         }
 
         return xIgnitionStatus.lastOffFailed;
@@ -310,7 +310,7 @@ IgnitionOff( void ) {
      * but isn't an error. */
     else if ( !GPIOPinRead( GPIO_PORTB_BASE, RUN_PIN ) &&
               !xIgnitionStatus.running ) {
-        UARTprintf( "Ignition OFF unnecessary\n" );
+        debug_print( "Ignition OFF unnecessary\n" );
         return true;
     }
     /* If the CAN task tells us the ignition isn't running, but the output was
@@ -321,7 +321,7 @@ IgnitionOff( void ) {
     else if ( !xIgnitionStatus.running ) {
         GPIOPinWrite( GPIO_PORTB_BASE, RUN_PIN, 0 );
         xTaskNotify( xRemoteStartTaskHandle, RS_NOTIFY_ERROR, eSetBits );
-        UARTprintf( "\nError: Ignition OFF commanded but current state cannot be determined\n" );
+        debug_print( "\nError: Ignition OFF commanded but current state cannot be determined\n" );
         return false;
     }
     /* If RUN_PIN is low already but the CAN task tells us the ignition is
@@ -330,7 +330,7 @@ IgnitionOff( void ) {
      * an OFF command with the key ON. Still, we return false because the
      * ignition has not been confirmed OFF. */
     else {
-        UARTprintf( "\nIgnition OFF commanded but key ON\n" );
+        debug_print( "\nIgnition OFF commanded but key ON\n" );
         return false;
     }
 }
@@ -347,7 +347,7 @@ IgnitionStart( void ) {
     uint16_t usInitialRPM = *( uint16_t * )( chRPM.xData );
 
     if ( !IgnitionOn() ) {
-        UARTprintf( "Ignition START attempted but ON failed\n" );
+        debug_print( "Ignition START attempted but ON failed\n" );
         return false;
     }
 
@@ -390,10 +390,10 @@ IgnitionStart( void ) {
             /* Begin counting. */
             TimerEnable( WTIMER1_BASE, TIMER_A );
 
-            UARTprintf( "Ignition START succeeded\n" );
+            debug_print( "Ignition START succeeded\n" );
         }
         else {
-            UARTprintf( "Ignition START failed\n" );
+            debug_print( "Ignition START failed\n" );
             return false;
         }
 
@@ -405,16 +405,16 @@ IgnitionStart( void ) {
 
         /* Print an error message. */
         if ( GPIOPinRead( GPIO_PORTB_BASE, START_PIN ) && usInitialRPM != 0 ) {
-            UARTprintf( "\nError: Ignition START attempted but engine appears to be starting already\n" );
+            debug_print( "\nError: Ignition START attempted but engine appears to be starting already\n" );
         }
         else if ( GPIOPinRead( GPIO_PORTB_BASE, START_PIN ) ) {
-            UARTprintf( "\nError: Ignition START attempted but START output was already high\n" );
+            debug_print( "\nError: Ignition START attempted but START output was already high\n" );
         }
         else if ( usInitialRPM != 0 ) {
-            UARTprintf( "\nError: Ignition START attempted with RPM nonzero\n" );
+            debug_print( "\nError: Ignition START attempted with RPM nonzero\n" );
         }
         else {
-            UARTprintf( "\nError: Ignition START attempted with unknown failure cause\n" );
+            debug_print( "\nError: Ignition START attempted with unknown failure cause\n" );
         }
     }
 
@@ -478,7 +478,7 @@ RemoteStartTask( void *pvParameters ) {
              * outputs and suspend this task. Currently there is no recovery
              * from this state. */
 
-            UARTprintf("rs notified: RS_NOTIFY_ERROR\n");
+            debug_print("rs notified: RS_NOTIFY_ERROR\n");
 
             /* Disable further interrupts. */
             TimerIntDisable( WTIMER1_BASE, TIMER_TIMA_TIMEOUT );
@@ -501,7 +501,7 @@ RemoteStartTask( void *pvParameters ) {
              * redundancy to ensure that the ignition is switched off, even in
              * the event of task malfunctions. */
 
-            UARTprintf("rs notified: RS_NOTIFY_IGNITION_OFF\n");
+            debug_print("rs notified: RS_NOTIFY_IGNITION_OFF\n");
 
             /* Set the starting value to 1 second. */
             TimerLoadSet( WTIMER1_BASE, TIMER_A, TIMEOUT_CHECK_OFF );
@@ -523,19 +523,19 @@ RemoteStartTask( void *pvParameters ) {
              * while still awaiting confirmation from the ISR that the
              * ignition is off. */
             do {
-                UARTprintf("ignition off check in progress\n");
+                debug_print("ignition off check in progress\n");
                 xTaskNotifyWait( RS_NOTIFY_NONE, RS_NOTIFY_CHECK_PASS,
                                  &ulNotificationValue, portMAX_DELAY );
             } while ( !( ulNotificationValue & RS_NOTIFY_CHECK_PASS ) );
 
-            UARTprintf("ignition off check passed\n");
+            debug_print("ignition off check passed\n");
         }
         else if ( ulNotificationValue & RS_NOTIFY_NO_CLIENT ) {
             /* Modem UART task is signaling that no clients are connected.
              * If this is the case, we set a shorter 1-minute timeout before
              * the ignition will be disabled. */
 
-            UARTprintf("rs notified: RS_NOTIFY_NO_CLIENT\n");
+            debug_print("rs notified: RS_NOTIFY_NO_CLIENT\n");
 
             /* If the timer is enabled (counting) already, we need to
              * check if it would already time out within 1 minute. */
@@ -552,7 +552,7 @@ RemoteStartTask( void *pvParameters ) {
             /* One or more clients reconnected after all were disconnected.
              * If there is a 1-minute timeout running, cancel it. */
 
-            UARTprintf("rs notified: RS_NOTIFY_CLIENT\n");
+            debug_print("rs notified: RS_NOTIFY_CLIENT\n");
 
             if ( HWREG( WTIMER1_BASE + TIMER_O_CTL ) & TIMER_CTL_TAEN &&
                  TimerLoadGet( WTIMER1_BASE, TIMER_A ) == TIMEOUT_NO_CLIENT ) {
@@ -565,13 +565,13 @@ RemoteStartTask( void *pvParameters ) {
         }
         else if ( ulNotificationValue == RS_NOTIFY_IGNITION_ON ) {
 
-            UARTprintf("rs notified: RS_NOTIFY_IGNITION_ON\n");
+            debug_print("rs notified: RS_NOTIFY_IGNITION_ON\n");
 
             IgnitionOn();
         }
         else if ( ulNotificationValue == RS_NOTIFY_START ) {
 
-            UARTprintf("rs notified: RS_NOTIFY_START\n");
+            debug_print("rs notified: RS_NOTIFY_START\n");
 
             IgnitionStart();
 
@@ -579,8 +579,8 @@ RemoteStartTask( void *pvParameters ) {
         /* Either an undefined notification or more than one notification was
          * detected. */
         else {
-            UARTprintf("%08X\n", ulNotificationValue);
-            UARTprintf("Error: Remote Start Task received an unexpected notification\n");
+            debug_print("%08X\n", ulNotificationValue);
+            debug_print("Error: Remote Start Task received an unexpected notification\n");
         }
 
     } /* while ( 1 ) */

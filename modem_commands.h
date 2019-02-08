@@ -27,13 +27,18 @@
 #include <stdint.h>
 
 
+/* A command to be sent to the modem */
 typedef struct {
     uint8_t *pucData;
 } ModemCommand_t;
 
+/* A response from the modem. ulCheckLength is the hard-coded length of the
+ * response string, used when the response contains variable data after the
+ * initial set of characters. This allows for checking only the initial
+ * characters when confirming a response. */
 typedef struct {
-    uint8_t *pucData;
-    uint32_t ulCheckLength;
+    uint8_t *pucData; /* The response string */
+    uint32_t ulCheckLength; /* The number of characters to check for */
 } ModemResponse_t;
 
 /*
@@ -43,7 +48,7 @@ extern const ModemResponse_t rspOK;
 extern const ModemResponse_t rspERROR;
 
 /*
- * Commands, grouped with their responses --------------------------------------- extern??
+ * Commands, grouped with their unique responses
  */
 extern const ModemCommand_t cmdAT;
 
@@ -101,5 +106,6 @@ extern const ModemCommand_t cmdATCIPSEND;
 extern const ModemResponse_t rspATCIPSENDPrompt;
 
 extern const ModemResponse_t rspServerCommand;
+
 
 #endif /* MODEM_COMMANDS_H_ */

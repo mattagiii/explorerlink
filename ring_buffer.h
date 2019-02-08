@@ -27,6 +27,8 @@
 #include <stdint.h>
 
 
+/* RingBuffer_t represents a fixed-size buffer that functions as a queue
+ * (FIFO). */
 typedef struct {
     volatile uint8_t *pucData;
     volatile uint32_t ulSize;
@@ -34,6 +36,8 @@ typedef struct {
     volatile uint32_t ulWriteIndex;
 } RingBuffer_t;
 
+/* All ring buffer functions return the status of the buffer - either empty,
+ * partially filled (OK), or full. */
 typedef enum {
     BUFFER_OK,
     BUFFER_EMPTY,
