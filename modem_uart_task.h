@@ -63,6 +63,6 @@ typedef struct ModemStatus_t {
 extern TaskHandle_t xModemUARTTaskHandle;
 extern volatile ModemStatus_t xModemStatus;
 
-extern uint32_t ModemUARTTaskInit(void);
+uint32_t ModemUARTTaskInit(void);
 
 #endif /* MODEM_UART_TASK_H_ */

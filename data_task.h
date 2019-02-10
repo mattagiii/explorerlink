@@ -28,6 +28,6 @@
 
 extern TaskHandle_t xDataTaskHandle;
 
-extern uint32_t DataTaskInit(void);
+uint32_t DataTaskInit(void);
 
-#endif // __DATA_TASK_H__
+#endif /* __DATA_TASK_H__ */

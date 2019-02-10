@@ -45,23 +45,23 @@ typedef enum {
 } RingBufferStatus_t;
 
 
-extern RingBufferStatus_t eRingBufferStatus(volatile RingBuffer_t *pxBuffer);
+RingBufferStatus_t eRingBufferStatus(volatile RingBuffer_t *pxBuffer);
 
-extern RingBufferStatus_t eRingBufferRead(volatile RingBuffer_t *pxBuffer,
+RingBufferStatus_t eRingBufferRead(volatile RingBuffer_t *pxBuffer,
                                         uint8_t *pucByte);
 
-extern RingBufferStatus_t eRingBufferReadN(volatile RingBuffer_t *pxBuffer,
+RingBufferStatus_t eRingBufferReadN(volatile RingBuffer_t *pxBuffer,
                                         uint8_t *pucBytes, uint32_t ulNBytes);
 
-extern RingBufferStatus_t eRingBufferWrite(volatile RingBuffer_t *pxBuffer,
+RingBufferStatus_t eRingBufferWrite(volatile RingBuffer_t *pxBuffer,
                                          uint8_t ucByte);
 
-extern RingBufferStatus_t eRingBufferWriteN(volatile RingBuffer_t *pxBuffer,
+RingBufferStatus_t eRingBufferWriteN(volatile RingBuffer_t *pxBuffer,
                                     uint8_t *pucBytes, uint32_t ulNBytes);
 
-extern void vRingBufferClear(volatile RingBuffer_t *pxBuffer);
+void vRingBufferClear(volatile RingBuffer_t *pxBuffer);
 
-extern RingBufferStatus_t xRingBufferPeek(volatile RingBuffer_t *pxBuffer,
+RingBufferStatus_t xRingBufferPeek(volatile RingBuffer_t *pxBuffer,
                                   uint8_t *ucByte);
 
 #endif /* RING_BUFFER_H_ */

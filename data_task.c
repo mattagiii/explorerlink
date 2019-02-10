@@ -73,9 +73,17 @@ uint32_t debugCount = 0;
  * of temporal accuracy and flexibility in defining sample rates when new
  * channels are added, but these could be replaced with match and sample lookup
  * tables for better efficiency.
+ *
+ * This strategy for sampling does have the advantage of being completely
+ * RTC-based, meaning that it's easy to associate a timestamp with each
+ * sampling event. However, using the RTC to trigger sampling also led to a
+ * rather inefficient ISR (particularly the last part which must manually
+ * increment the match value to set up the following sampling event), which is
+ * compounded by dealing with the hibernate module's 32768Hz (slow) clock
+ * domain. It would likely be worthwhile to re-implement sampling with a timer
+ * module, but an investigation of drift would need to occur first.
  */
-void
-HibernateIntHandler(void) {
+void HibernateIntHandler( void ) {
     /* The hibernate interrupt status */
     uint32_t ulStatus;
     /* The current seconds match value for the RTC */
@@ -94,9 +102,14 @@ HibernateIntHandler(void) {
     static float fIncrementSS = 0.0;
     /* The next subseconds match value for the RTC (ulMatchSSNext is used) */
     static float fNextMatchSS = 0.0;
+    /* Temp variable for the current sample buffer's rate */
     uint16_t usSampleRateHz;
+    /* For iteration through sample buffers */
     uint32_t i;
+    /* Required to save state when entering a critical section from an ISR */
     UBaseType_t uxSavedInterruptStatus;
+    /* Will be set by xTaskNotifyFromISR() if a higher-priority task than the
+     * current task should be yielded to by portYIELD_FROM_ISR() */
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
     debug_set_bus( 6 );
@@ -108,7 +121,8 @@ HibernateIntHandler(void) {
     ulStatus = HibernateIntStatus(true);
 
 
-    /* Equivalent to HibernateIntClear(ulStatus). */
+    /* Equivalent to HibernateIntClear(ulStatus), but without the spin-wait on
+     * the write-complete status bit. */
     HWREG(HIB_IC) |= ulStatus;
 
 
@@ -121,7 +135,9 @@ HibernateIntHandler(void) {
             fIncrementSS = 32.768 * (float)ulMinPeriodMS;
         }
 
-        /* Wait for write completion after HWREG(HIB_IC) |= ulStatus */
+        /* Wait for write completion after HWREG(HIB_IC) |= ulStatus (above).
+         * This must be done because the hibernate module is in a separate
+         * clock domain and register writes take much longer. */
         HibernateWriteComplete();
 
         /* Get the current match values (the exact sample time that triggered
@@ -265,8 +281,14 @@ static void DataTask(void *pvParameters) {
     }
 }
 
-void
-RTCConfigure(void) {
+/*
+ * Configures the hibernate peripheral in preparation for RTC use. Most of the
+ * function is dedicated to resetting the peripheral; we don't use a separate
+ * hibernation battery, and the module may retain power through a processor
+ * reset, so it's simpler to manually reset the peripheral here and ensure that
+ * all registers begin at their defaults.
+ */
+void RTCConfigure(void) {
 
     /* Disable the hibernate peripheral's clock source. This is only done in
      * case of a reset, because the hibernate module will stay enabled unless
@@ -309,8 +331,12 @@ RTCConfigure(void) {
     IntEnable(INT_HIBERNATE);
 }
 
-uint32_t
-DataTaskInit(void) {
+/*
+ * Initializes the Data task by allocating channel memory and sample buffers,
+ * setting up the real-time clock, and then registering the task function
+ * itself with the kernel.
+ */
+uint32_t DataTaskInit(void) {
 
     /* Allocate memory for latest channel values. */
     vChannelInit();

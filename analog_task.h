@@ -29,6 +29,6 @@
 
 extern TaskHandle_t xAnalogTaskHandle;
 
-extern uint32_t AnalogTaskInit(void);
+uint32_t AnalogTaskInit(void);
 
 #endif // __ANALOG_TASK_H__

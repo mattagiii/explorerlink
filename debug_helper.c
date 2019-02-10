@@ -56,7 +56,8 @@ xSemaphoreHandle g_pUARTSemaphore;
 
 /* Counter to be incremented at 10kHz for the FreeRTOS kernel's runtime
  * statistics. See the timer setup and ISR below, as well as the associated
- * FreeRTOS macro definitions in FreeRTOSConfig.h. */
+ * FreeRTOS macro definitions in FreeRTOSConfig.h. Volatile because it's
+ * incremented in an ISR. */
 volatile uint32_t ulRuntimeStatsCounter = 0;
 
 /* This global stores the last value on the debug status bus (PF0-4). When
@@ -124,9 +125,11 @@ void vPrintStackWatermarks( void ) {
  * must be set correctly in debug_helper.h for this to work.
  */
 void vGetTaskRunTimes( void ) {
-
+    /* Required number of tasks for uxTaskGetSystemState() */
     volatile UBaseType_t uxArraySize = NUM_TASKS;
+    /* Array for uxTaskGetSystemState() to place task statuses */
     TaskStatus_t pxTaskStatusArray[ NUM_TASKS * sizeof( TaskStatus_t ) ];
+    /* Total time spent running */
     uint32_t ulTotalRunTime;
 
     uxTaskGetSystemState( pxTaskStatusArray, uxArraySize, &ulTotalRunTime );

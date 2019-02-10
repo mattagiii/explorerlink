@@ -109,9 +109,6 @@ main(void) {
     /* Create the Modem Management task (modem_mgmt_task.h). */
     if(ModemMgmtTaskInit() != 0) { while(1) {} }
 
-    /* Create the JSN ultrasonic sensing task (jsn_task.h). */
-    if(JSNTaskInit() != 0) { while(1) {} }
-
     /* Create the SRF ultrasonic sensing task (srf_task.h). */
     if(SRFTaskInit() != 0) { while(1) {} }
 

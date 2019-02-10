@@ -59,8 +59,14 @@
  * no object 0. */
 #define OBJS_IN_USE                     0x00000FFF
 
+/* Amount of time to wait for CAN messages to be received before timing out.
+ * Upon timeout we update xIgnitionStatus.running to indicate that messages
+ * aren't arriving, and then wait indefinitely. Once they arrive, we begin
+ * waiting DEFAULT_RX_TIMEOUT_MS milliseconds again to force a prompt timeout
+ * when they next stop. */
 #define DEFAULT_RX_TIMEOUT_MS           100
 
+/* CAN task notification bit masks */
 #define CAN_NOTIFY_NONE                 0x00000000
 #define CAN_NOTIFY_RX                   0x00000001
 #define CAN_NOTIFY_ALL                  0xFFFFFFFF

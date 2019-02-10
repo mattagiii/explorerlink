@@ -62,9 +62,9 @@ extern SampleRateBuffer_t xSampleBuffer1Hz;
 extern SampleRateBuffer_t xSampleBuffer10Hz;
 extern SampleRateBuffer_t xSampleBuffer100Hz;
 
-extern uint8_t ucSampleGetBufferCount(void);
-extern float ulSampleGetMinPeriodMS(void);
-extern void vInitSampleRateBuffers(void);
+uint8_t ucSampleGetBufferCount(void);
+float ulSampleGetMinPeriodMS(void);
+void vInitSampleRateBuffers(void);
 
 
 #endif /* SAMPLE_H_ */

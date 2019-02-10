@@ -55,8 +55,7 @@ TaskHandle_t xModemMgmtTaskHandle;
  * allows confirming that our outputs are working and detecting if the modem
  * turns off due to a dead battery.
  */
-void
-PortBIntHandler(void) {
+void PortBIntHandler(void) {
     uint32_t ulStatus;
 
     debug_set_bus( 11 );
@@ -86,6 +85,8 @@ PortBIntHandler(void) {
 
 /*
  * Manually power the modem on.
+ *
+ * Returns true for success, false if failure.
  */
 bool ModemPowerOn(void) {
     /* Check PB2 (Modem power status) to ensure that the modem is off. */
@@ -122,6 +123,8 @@ bool ModemPowerOn(void) {
 
 /*
  * Manually power the modem down.
+ *
+ * Returns true for success, false if failure.
  */
 bool ModemPowerOff(void) {
     /* Check PB2 (Modem power status) to ensure that the modem is on. */
@@ -153,6 +156,8 @@ bool ModemPowerOff(void) {
 
 /*
  * Manually reset the modem via hardware.
+ *
+ * Returns true for success, false if failure.
  */
 bool ModemReset(void) {
     /* Check PB2 (Modem power status) to ensure that the modem is on. */
@@ -280,11 +285,6 @@ static void ModemGPIOConfigure(void) {
     /* PB2 is the power status input. */
     GPIOPinTypeGPIOInput(GPIO_PORTB_BASE, GPIO_PIN_2);
 
-    // THIS SHOULD NOT BE NEEDED, AS THIS FUNCTION IS ONLY FOR RUNTIME INTERRUPT REGISTRATION
-    /* Register interrupt handler. This also enables the interrupt at the
-     * NVIC. */
-    GPIOIntRegister(GPIO_PORTB_BASE, PortBIntHandler);
-
     /* Set PB2 to interrupt on any edge. */
     GPIOIntTypeSet(GPIO_PORTB_BASE, GPIO_PIN_2, GPIO_BOTH_EDGES);
 
@@ -297,8 +297,7 @@ static void ModemGPIOConfigure(void) {
  * Initializes the Modem Management task by configuring the necessary GPIOs and
  * creating the FreeRTOS task.
  */
-uint32_t
-ModemMgmtTaskInit(void) {
+uint32_t ModemMgmtTaskInit(void) {
 
     ModemGPIOConfigure();
 

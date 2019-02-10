@@ -29,6 +29,6 @@
 
 extern TaskHandle_t xSRFTaskHandle;
 
-extern uint32_t SRFTaskInit(void);
+uint32_t SRFTaskInit(void);
 
 #endif /* SRF_TASK_H_ */

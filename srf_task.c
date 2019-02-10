@@ -3,6 +3,8 @@
  * FreeRTOS task for controlling SRF02 ultrasonic sensors via UART and
  * estimating distance to obstacles.
  *
+ * TODO: support multiple sensor aggregation
+ *
  * Copyright 2018, 2019 Matt Rounds
  *
  * This file is part of ExplorerLink.
@@ -61,14 +63,14 @@ void UART3IntHandler(void) {
 
     debug_set_bus( 17 );
 
-    // Read the (masked) interrupt status of the UART.
+    /* Read the (masked) interrupt status of the UART. */
     ulStatus = UARTIntStatus(UART3_BASE, 1);
 
-    // Clear any pending status.
+    /* Clear any pending status. */
     UARTIntClear(UART3_BASE, ulStatus);
 
-    // The TX FIFO transitioned below its set level. This only occurs if the
-    // FIFO was filled above that level first.
+    /* The TX FIFO transitioned below its set level. This only occurs if the
+     * FIFO was filled above that level first. */
     if (ulStatus == UART_INT_TX) {
 
     }
@@ -92,7 +94,6 @@ void UART3IntHandler(void) {
             if (lByteCount > 0) {
                 ulRxVal |= UARTCharGetNonBlocking(UART3_BASE)
                            << ((lByteCount-1)*8);
-//                ulRxVal = UARTCharGetNonBlocking(UART3_BASE);
                 lByteCount--;
             }
             else {

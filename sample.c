@@ -40,7 +40,7 @@ SampleRateBuffer_t *pxSampleRateBuffers[] = {
                          &xSampleBuffer100Hz
 };
 
-/* Sample rate buffer definitions */
+/* Sample buffer definitions */
 volatile uint8_t puc1HzData[SAMPLE_BUFFER_SIZE];
 SampleRateBuffer_t xSampleBuffer1Hz = {
                     .xData = {
@@ -74,14 +74,14 @@ SampleRateBuffer_t xSampleBuffer100Hz = {
 
 
 /*
- * Get the number of sample rate buffers.
+ * Get the number of sample buffers.
  */
 uint8_t ucSampleGetBufferCount(void) {
     return ARRAY_LENGTH(pxSampleRateBuffers);
 }
 
 /*
- * Checks the sample rate buffers and returns the period of the one with the
+ * Checks the sample buffers and returns the period of the one with the
  * highest frequency, in milliseconds.
  */
 float ulSampleGetMinPeriodMS(void) {

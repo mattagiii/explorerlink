@@ -79,8 +79,7 @@ typedef enum timeoutType tTimeoutType;
 /*
  * ISR for the "safety backup" timer.
  */
-void
-WTimer1AIntHandler( void ) {
+void WTimer1AIntHandler( void ) {
 
     uint32_t ulStatus;
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
@@ -204,8 +203,7 @@ WTimer1AIntHandler( void ) {
  * If an error condition is detected, this function also self-notifies the
  * remote start task with RS_NOTIFY_ERROR.
  */
-static bool
-IgnitionOn( void ) {
+static bool IgnitionOn( void ) {
 
     uint32_t ulIgnitionErrorCount = 0;
 
@@ -272,8 +270,7 @@ IgnitionOn( void ) {
  * If an error condition is detected, this function also self-notifies the
  * remote start task with RS_NOTIFY_ERROR.
  */
-static bool
-IgnitionOff( void ) {
+static bool IgnitionOff( void ) {
 
     uint32_t ulIgnitionErrorCount = 0;
 
@@ -340,11 +337,10 @@ IgnitionOff( void ) {
  * if the starting sequence completes successfully and RPM confirms that the
  * engine is running.
  */
-static bool
-IgnitionStart( void ) {
+static bool IgnitionStart( void ) {
 
     uint32_t ulIgnitionErrorCount = 0;
-    uint16_t usInitialRPM = *( uint16_t * )( chRPM.xData );
+    uint16_t usInitialRPM = usChannelValueGet( &chRPM );
 
     if ( !IgnitionOn() ) {
         debug_print( "Ignition START attempted but ON failed\n" );
@@ -370,7 +366,7 @@ IgnitionStart( void ) {
         do {
             vTaskDelay( pdMS_TO_TICKS( 10 ) );
         } while ( ulIgnitionErrorCount++ < 500 &&
-                  *( uint16_t * )( chRPM.xData ) <= 1000 );
+                  usChannelValueGet( &chRPM ) <= 1000 );
 
         GPIOPinWrite( GPIO_PORTB_BASE, START_PIN, 0 );
 
@@ -421,8 +417,12 @@ IgnitionStart( void ) {
     return false;
 }
 
-static void
-RemoteStartTask( void *pvParameters ) {
+/*
+ * This task awaits commands from the server that tell it to turn the ignition
+ * on/off or start the engine. It also maintains a timer which provides
+ * redundancy by ensuring that the ignition outputs perform as expected.
+ */
+static void RemoteStartTask( void *pvParameters ) {
 
     uint32_t ulNotificationValue;
 
@@ -586,8 +586,12 @@ RemoteStartTask( void *pvParameters ) {
     } /* while ( 1 ) */
 }
 
-static void
-RemoteStartOutputConfigure( void ) {
+/*
+ * Configures GPIOs B6 and B7, which correspond to the two ignition control
+ * outputs. Both control the gate of a MOSFET, which in turn grounds the coil
+ * of a relay.
+ */
+static void RemoteStartOutputConfigure( void ) {
 
     /* Enable clocking for the GPIO ports used for the output signals. */
     SysCtlPeripheralEnable( SYSCTL_PERIPH_GPIOB );
@@ -615,8 +619,7 @@ RemoteStartOutputConfigure( void ) {
  * - Disabling ignition after 1 minute if no clients are connected
  * - Verifying success of the two former functions 5 seconds later
  */
-static void
-RemoteStartTimerConfigure(void) {
+static void RemoteStartTimerConfigure(void) {
 
     /* Enable clocking for Wide Timer 1. */
     SysCtlPeripheralEnable( SYSCTL_PERIPH_WTIMER1 );
@@ -645,8 +648,7 @@ RemoteStartTimerConfigure(void) {
  * necessary for the control outputs. Then create the task itself for the
  * scheduler.
  */
-uint32_t
-RemoteStartTaskInit( void ) {
+uint32_t RemoteStartTaskInit( void ) {
 
     RemoteStartOutputConfigure();
     RemoteStartTimerConfigure();

@@ -41,7 +41,7 @@
  * specific task) along with various channel metadata. */
 typedef struct {
     /* The latest data value for this channel */
-    volatile uint8_t *xData;
+    uint8_t *xData;
     /* Number of bytes for the channel value */
     uint8_t ucByteCount;
     /* CAN ID for received CAN messages containing this channel (if
@@ -57,7 +57,8 @@ typedef struct {
 } Channel_t;
 
 /* Channel declarations. These are global to the program as they are relevant
- * to many different tasks. */
+ * to many different tasks, and volatile as various threads/ISRs may write to
+ * them. */
 extern volatile Channel_t chAVTEMP1Raw;
 extern volatile Channel_t chAVTEMP2Raw;
 extern volatile Channel_t chAVTEMP3Raw;

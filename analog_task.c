@@ -35,7 +35,6 @@
 #include "driverlib/pwm.h"
 #include "driverlib/rom.h"
 #include "driverlib/sysctl.h"
-#include "driverlib/timer.h"
 #include "utils/uartstdio.h"
 #include "analog_task.h"
 #include "channel.h"
@@ -308,7 +307,9 @@ static bool MAX5815SetDAC( MAX5815DACSelection_t ulSelectedDACs,
  * one floating point operation, so this function must be used infrequently.
  */
 static uint32_t GetCabinTempmF( void ) {
+    /* Convert stored raw ADC code to uV */
     uint32_t ulSensor1UV = ulChannelValueGet( &chAVTEMP1Raw ) * UV_PER_ADC_CODE;
+    /* Convert uV to millidegrees F */
     uint32_t ulCabinTempmF = TEMP_C_TO_F( TEMP_V_TO_C( ulSensor1UV ) );
 
     vChannelStore( &chCabinTemp, &ulCabinTempmF );
@@ -359,6 +360,11 @@ static uint32_t GetTempSetmF( void ) {
     return ulTempSetLastmF;
 }
 
+/*
+ * This task performs PI control with measured cabin temperature and
+ * communicates with the MAX5815 DAC to control the vehicle's temperature blend
+ * door, which balances the amount of hot and cold air entering the cabin.
+ */
 static void AnalogTask( void *pvParameters ) {
 
     /* The user's desired temperature, in millidegrees Fahrenheit */

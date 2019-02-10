@@ -56,6 +56,6 @@ typedef struct IgnitionStatus_t {
 extern TaskHandle_t xRemoteStartTaskHandle;
 extern IgnitionStatus_t xIgnitionStatus;
 
-extern uint32_t RemoteStartTaskInit(void);
+uint32_t RemoteStartTaskInit(void);
 
-#endif // __REMOTE_START_TASK_H__
+#endif /* __REMOTE_START_TASK_H__ */

@@ -29,6 +29,6 @@
 
 extern TaskHandle_t xCANTaskHandle;
 
-extern uint32_t CANTaskInit(void);
+uint32_t CANTaskInit(void);
 
 #endif // __CAN_TASK_H__

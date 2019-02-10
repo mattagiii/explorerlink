@@ -45,10 +45,11 @@ RingBufferStatus_t eRingBufferStatus(volatile RingBuffer_t *pxBuffer) {
 
 /*
  * Read a single byte from the ring buffer. This function is not reentrant
- * when called for the same RingBuffer_t. However, writes to the buffer are
- * generally thread-safe as long as it can be tolerated that BUFFER_EMPTY may
- * be returned despite a write adding to the buffer before the return. If this
- * can't be tolerated, use critical sections or mutexes.
+ * when called for the same RingBuffer_t. However, because the write index is
+ * only used for the emptiness check, writes to the buffer are
+ * approximately thread-safe as long as it can be tolerated that BUFFER_EMPTY
+ * may be returned despite a write adding to the buffer before the return. If
+ * this can't be tolerated, use critical sections or mutexes.
  */
 RingBufferStatus_t eRingBufferRead(volatile RingBuffer_t *pxBuffer,
                                    uint8_t *pucByte) {
@@ -82,8 +83,9 @@ RingBufferStatus_t eRingBufferReadN(volatile RingBuffer_t *pxBuffer,
 
 /*
  * Write a single byte to a given buffer. This function is not reentrant when
- * called for the same RingBuffer_t. Reading the buffer during a write call
- * can be thread-safe if it is tolerable that BUFFER_FULL is returned
+ * called for the same RingBuffer_t. Because the read index is only used for
+ * the fullness check, reading the buffer during a write call can be
+ * approximately thread-safe if it is tolerable that BUFFER_FULL is returned
  * incorrectly when execution returns to the write call. Use critical sections
  * or mutexes otherwise.
  */

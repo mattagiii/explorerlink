@@ -34,9 +34,9 @@
 
 extern TaskHandle_t xModemMgmtTaskHandle;
 
-extern uint32_t ModemMgmtTaskInit(void);
-extern bool ModemPowerOn(void);
-extern bool ModemPowerOff(void);
-extern bool ModemReset(void);
+uint32_t ModemMgmtTaskInit(void);
+bool ModemPowerOn(void);
+bool ModemPowerOff(void);
+bool ModemReset(void);
 
 #endif // __MODEM_MGMT_TASK_H__

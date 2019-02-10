@@ -125,6 +125,7 @@ volatile RingBuffer_t xRxBuffer = {
  */
 void UART6IntHandler(void) {
     uint32_t ulStatus;
+    /* Temp variable for byte read from buffer and placed in UART FIFO */
     uint8_t uctxByte;
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
@@ -200,7 +201,7 @@ void UART6IntHandler(void) {
  * be sent without triggering an interrupt.
  */
 static void UART6Prime(void) {
-    uint8_t byte;
+    uint8_t ucTxByte;
 
     /* Check for data to transmit. */
     if(eRingBufferStatus(&xTxBuffer) != BUFFER_EMPTY) {
@@ -212,8 +213,8 @@ static void UART6Prime(void) {
         /* Take some characters out of the transmit buffer and feed them to
          * the UART transmit FIFO. */
         while(UARTSpaceAvail(UART6_BASE) &&
-              eRingBufferRead(&xTxBuffer, &byte) != BUFFER_EMPTY) {
-            UARTCharPutNonBlocking(UART6_BASE, byte);
+              eRingBufferRead(&xTxBuffer, &ucTxByte) != BUFFER_EMPTY) {
+            UARTCharPutNonBlocking(UART6_BASE, ucTxByte);
         }
 
         /* Reenable the UART interrupt. */
@@ -264,13 +265,16 @@ static bool UART6RcvLine(uint8_t *pucBuffer, uint32_t ulWaitTimeMS,
                          uint32_t *pulLineLength) {
     TickType_t xTicksToWait;
     TimeOut_t xTimeOut;
-    uint8_t ucByte = 0;
+    /* Temp variable for bytes read from the ring buffer */
+    uint8_t ucRxByte = 0;
     uint32_t ulNotificationValue;
 
     /* Record the time at which this function was entered. */
     vTaskSetTimeOutState(&xTimeOut);
 
-    /* xTicksToWait is the timeout value passed to this function. */
+    /* xTicksToWait is the timeout value passed to this function, converted to
+     * scheduler ticks. It is modified by xTaskCheckForTimeOut() to create a
+     * timeout for the whole reception process */
     xTicksToWait = pdMS_TO_TICKS(ulWaitTimeMS);
 
     /* Loop until a non-blank line is read or the timeout occurs. */
@@ -281,9 +285,9 @@ static bool UART6RcvLine(uint8_t *pucBuffer, uint32_t ulWaitTimeMS,
             /* If there are already characters in the buffer, the first loop
              * iteration will read them until the buffer is empty or '\n' is
              * reached. */
-            while (eRingBufferRead(&xRxBuffer, &ucByte) != BUFFER_EMPTY) {
-                pucBuffer[(*pulLineLength)++] = ucByte;
-                if (ucByte == '\n') {
+            while (eRingBufferRead(&xRxBuffer, &ucRxByte) != BUFFER_EMPTY) {
+                pucBuffer[(*pulLineLength)++] = ucRxByte;
+                if (ucRxByte == '\n') {
                     break;
                 }
             }
@@ -291,7 +295,7 @@ static bool UART6RcvLine(uint8_t *pucBuffer, uint32_t ulWaitTimeMS,
             /* If a full line hasn't been read yet, check for a timeout and
              * then await notification that the ISR has updated the ring
              * buffer. */
-            if (ucByte != '\n') {
+            if (ucRxByte != '\n') {
                 /* Because xTaskNotifyWait() will trigger on notifications
                  * other than MODEM_NOTIFY_RX, this loop re-runs the wait if
                  * the notification value doesn't have the MODEM_NOTIFY_RX bit
@@ -313,7 +317,7 @@ static bool UART6RcvLine(uint8_t *pucBuffer, uint32_t ulWaitTimeMS,
                                     &ulNotificationValue, xTicksToWait);
                 } while (!(ulNotificationValue & MODEM_NOTIFY_RX));
             }
-        } while (ucByte != '\n');
+        } while (ucRxByte != '\n');
         /* This point is only reached if a line (ending in '\n') has been read.
          * The outermost loop only exits if the line is not "\r\n" (blank). */
     } while (pucBuffer[0] == '\r' && pucBuffer[1] == '\n');
@@ -356,7 +360,9 @@ static bool ModemCheckRspLine(uint8_t *pucLine, const ModemResponse_t *pxRsp) {
  * Returns false if an unexpected response arrived.
  */
 static bool ModemEchoOff(void) {
+    /* Fixed-size buffer for UART lines received */
     uint8_t pucRcvdLine[RX_BUFFER_SIZE];
+    /* Temp variable for length of received lines */
     uint32_t ulByteCount;
 
     ModemSendCommand(&cmdATE0);
@@ -390,10 +396,15 @@ static bool ModemEchoOff(void) {
  * Returns false if an unexpected response arrived.
  */
 static bool ModemUpdateRTCTime(void) {
+    /* Fixed-size buffer for UART lines received */
     uint8_t pucRcvdLine[RX_BUFFER_SIZE];
+    /* Temp variable for length of received lines */
     uint32_t ulByteCount;
+    /* Required by mktime() to generate seconds since epoch from parsed time */
     struct tm xTime;
-    int32_t lZoneOffset;
+    /* Offset between local time and GMT in seconds */
+    int32_t lZoneOffsetS;
+    /* Temp variable for the substring containing the time zone offset */
     char *pucZoneString;
 
     ModemSendCommand(&cmdATCCLK);
@@ -413,10 +424,10 @@ static bool ModemUpdateRTCTime(void) {
          * PST corresponds to "-32" and PDT corresponds to "-28". The pointer
          * is first moved past the seconds field and then converted. */
         if ((pucZoneString = (pucZoneString + 2))[0] == '-') {
-            lZoneOffset = (atoi(pucZoneString + 1) * -1) * 15 * 60;
+            lZoneOffsetS = (atoi(pucZoneString + 1) * -1) * 15 * 60;
         }
         else {
-            lZoneOffset = atoi(pucZoneString + 1) * 15 * 60;
+            lZoneOffsetS = atoi(pucZoneString + 1) * 15 * 60;
         }
         xTime.tm_isdst = -1;
 
@@ -425,7 +436,7 @@ static bool ModemUpdateRTCTime(void) {
             /* mktime() gives seconds since a 1900 epoch. Subtracting the first
              * offset gives seconds since the 1970 epoch (Unix time). The
              * second offset is subtracted to bring the local time to GMT. */
-            HibernateRTCSet(mktime(&xTime) - EPOCH_ADJUST_S - lZoneOffset);
+            HibernateRTCSet(mktime(&xTime) - EPOCH_ADJUST_S - lZoneOffsetS);
 
             /* In addition to setting the RTC to Unix time, we set a match in
              * the near future to kick off the RTC interrupt sampling cycle.
@@ -454,9 +465,13 @@ static bool ModemUpdateRTCTime(void) {
  * Returns false if an unexpected response arrived.
  */
 static bool ModemCheckBattery(void) {
+    /* Fixed-size buffer for UART lines received */
     uint8_t pucRcvdLine[RX_BUFFER_SIZE];
+    /* Temp variable for length of received lines */
     uint32_t ulByteCount;
+    /* Array for a string representation of the voltage */
     char pucBatteryVoltageMV[8];
+    /* The final parsed voltage in mV */
     uint16_t usBatteryVoltageMV;
 
     ModemSendCommand(&cmdATCBC);
@@ -472,7 +487,8 @@ static bool ModemCheckBattery(void) {
         strtok(NULL, ",");
         memcpy(pucBatteryVoltageMV, strtok(NULL, ","), 8); /* e.g. "3.735V\n\0" */
 
-        /* Move the millivolt digits over by one character. */
+        /* Move the millivolt digits over by one character. This gets rid of
+         * the decimal point, producing a number that atoi() can parse. */
         pucBatteryVoltageMV[1] = pucBatteryVoltageMV[2]; /* 7 */
         pucBatteryVoltageMV[2] = pucBatteryVoltageMV[3]; /* 3 */
         pucBatteryVoltageMV[3] = pucBatteryVoltageMV[4]; /* 5 */
@@ -501,8 +517,11 @@ static bool ModemCheckBattery(void) {
  * Returns false if an unexpected response arrived.
  */
 static bool ModemCheckSignal(void) {
+    /* Fixed-size buffer for UART lines received */
     uint8_t pucRcvdLine[RX_BUFFER_SIZE];
+    /* Temp variable for length of received lines */
     uint32_t ulByteCount;
+    /* The parsed signal level */
     uint32_t ulSignalLevel;
 
     ModemSendCommand(&cmdATCSQ);
@@ -537,7 +556,9 @@ static bool ModemCheckSignal(void) {
  * Returns false if an unexpected response arrived.
  */
 static bool ModemGetNetworkMode(void) {
+    /* Fixed-size buffer for UART lines received */
     uint8_t pucRcvdLine[RX_BUFFER_SIZE];
+    /* Temp variable for length of received lines */
     uint32_t ulByteCount;
 
     ModemSendCommand(&cmdATCIPMODEQuery);
@@ -574,7 +595,9 @@ static bool ModemGetNetworkMode(void) {
  * Returns false if an unexpected response arrived.
  */
 static bool ModemSetNetworkMode(bool bMode) {
+    /* Fixed-size buffer for UART lines received */
     uint8_t pucRcvdLine[RX_BUFFER_SIZE];
+    /* Temp variable for length of received lines */
     uint32_t ulByteCount;
 
     /* Send the proper mode command. */
@@ -613,7 +636,9 @@ static bool ModemSetNetworkMode(bool bMode) {
  * Returns false if an unexpected response arrived.
  */
 static bool ModemCheckNetworkStatus(void) {
+    /* Fixed-size buffer for UART lines received */
     uint8_t pucRcvdLine[RX_BUFFER_SIZE];
+    /* Temp variable for length of received lines */
     uint32_t ulByteCount;
 
     ModemSendCommand(&cmdATNETOPENQuery);
@@ -651,7 +676,9 @@ static bool ModemCheckNetworkStatus(void) {
  * Returns false if an unexpected response arrived.
  */
 static bool ModemNetworkOpen() {
+    /* Fixed-size buffer for UART lines received */
     uint8_t pucRcvdLine[RX_BUFFER_SIZE];
+    /* Temp variable for length of received lines */
     uint32_t ulByteCount;
 
     ModemSendCommand(&cmdATNETOPEN);
@@ -688,7 +715,9 @@ static bool ModemNetworkOpen() {
  * Returns false if an unexpected response arrived.
  */
 static bool ModemNetworkClose() {
+    /* Fixed-size buffer for UART lines received */
     uint8_t pucRcvdLine[RX_BUFFER_SIZE];
+    /* Temp variable for length of received lines */
     uint32_t ulByteCount;
 
     ModemSendCommand(&cmdATNETCLOSE);
@@ -724,7 +753,9 @@ static bool ModemNetworkClose() {
  * Returns false if an unexpected response arrived.
  */
 static bool ModemCheckTCPConnection(void) {
+    /* Fixed-size buffer for UART lines received */
     uint8_t pucRcvdLine[RX_BUFFER_SIZE];
+    /* Temp variable for length of received lines */
     uint32_t ulByteCount;
 
     ModemSendCommand(&cmdATCIPOPENQuery);
@@ -763,7 +794,9 @@ static bool ModemCheckTCPConnection(void) {
  * Returns false if an unexpected response arrived.
  */
 static bool ModemTCPConnect(void) {
+    /* Fixed-size buffer for UART lines received */
     uint8_t pucRcvdLine[RX_BUFFER_SIZE];
+    /* Temp variable for length of received lines */
     uint32_t ulByteCount;
 
     ModemSendCommand(&cmdATCIPOPEN);
@@ -815,16 +848,24 @@ static bool ModemTCPConnect(void) {
  * Returns false if the modem wasn't already in data mode.
  */
 static bool ModemTCPSend(SampleRateBuffer_t *pxBuffer) {
-    uint8_t ucByte;
+    /* Temp variable for bytes being moved from sample buffer to UART6Send() */
+    uint8_t ucByteToSend;
 
     /* In data mode, the modem is already ready to accept sample data for TCP
      * transmission, so we send it directly. Command mode is not supported. */
     if (xModemStatus.tcpConnectionMode == DATA_MODE) {
         /* Read from the ring buffer and send bytes until it is empty. This is
          * the only place ring buffers may be read from, which keeps the
-         * read thread-safe. */
-        while (eRingBufferRead(&(pxBuffer->xData), &ucByte) != BUFFER_EMPTY) {
-            UART6Send(&ucByte, 1, 0);
+         * read approximately thread-safe (BUFFER_EMPTY may be incorrectly
+         * returned at times; this is compensated for by having a long enough
+         * buffer to hold sample chunks until the next call). Also, because
+         * entire sample chunks are written within a critical section in the
+         * sampling ISR, it is not possible for this loop to send an incomplete
+         * chunk and then return. It isn't required that complete chunks always
+         * be sent by this function, but worth noting that they always are. */
+        while (eRingBufferRead(&(pxBuffer->xData), &ucByteToSend)
+               != BUFFER_EMPTY) {
+            UART6Send(&ucByteToSend, 1, 0);
         }
         return true;
     }
@@ -844,7 +885,9 @@ static bool ModemTCPSend(SampleRateBuffer_t *pxBuffer) {
  * Returns false if an unexpected response arrived (or no response).
  */
 static bool ModemSwitchToCommandMode(bool test) {
+    /* Fixed-size buffer for UART lines received */
     uint8_t pucRcvdLine[RX_BUFFER_SIZE];
+    /* Temp variable for length of received lines */
     uint32_t ulByteCount;
 
     /* '+++' must be preceded and followed by at least 1 second delays. */
@@ -880,7 +923,9 @@ static bool ModemSwitchToCommandMode(bool test) {
  * Returns false if an unexpected response arrived.
  */
 static bool ModemSwitchToDataMode(void) {
+    /* Fixed-size buffer for UART lines received */
     uint8_t pucRcvdLine[RX_BUFFER_SIZE];
+    /* Temp variable for length of received lines */
     uint32_t ulByteCount;
 
     ModemSendCommand(&cmdATO);
@@ -905,7 +950,9 @@ static bool ModemSwitchToDataMode(void) {
  * Returns false if an unexpected response arrived.
  */
 static bool ModemTCPDisconnect(void) {
+    /* Fixed-size buffer for UART lines received */
     uint8_t pucRcvdLine[RX_BUFFER_SIZE];
+    /* Temp variable for length of received lines */
     uint32_t ulByteCount;
 
     ModemSendCommand(&cmdATCIPCLOSE);
@@ -939,11 +986,17 @@ static bool ModemTCPDisconnect(void) {
  * Returns false if the command cannot be parsed.
  */
 static bool ModemParseCommand(uint8_t *pucBuffer) {
-
+    /* We store the last known client count locally so that we can evaluate
+     * when it is zero versus >0. */
     static int32_t ulLastClientCount = -1;
+    /* Queried prior value of the task notification */
     uint32_t ulPreviousValue;
+    /* pdPASS/FAIL depending on whether the task that is notified has an
+     * already pending notification */
     BaseType_t xNotifySuccessVal;
 
+    /* The first 3 characters are just for checking that this isn't garbage
+     * data. The fourth is the command character. */
     switch(pucBuffer[3]) {
 
         /* action: ignition on */
@@ -1024,8 +1077,12 @@ static bool ModemParseCommand(uint8_t *pucBuffer) {
  * Returns false if the unsolicited data can't be parsed.
  */
 static bool ModemReadUnsolicited(void) {
+    /* Fixed-size buffer for UART lines received */
     uint8_t pucRcvdLine[RX_BUFFER_SIZE];
+    /* Temp variable for length of received lines */
     uint32_t ulByteCount;
+    /* Delay counter limiting the time we can wait for a TCP connection to
+     * disappear after it is closed to 2.5 seconds (arbitrary). See below. */
     uint32_t ulWaitCount = 0;
 
     /* Receive a line. A shorter timeout is used since this function is only
@@ -1076,17 +1133,29 @@ static bool ModemReadUnsolicited(void) {
  * ready to be transmitted, this task will set up and perform the transmission.
  */
 static void ModemUARTTask(void *pvParameters) {
+    /* Task notification value */
     uint32_t ulNotificationValue = 0;
+    /* Counter for number of times we've retried checking for a signal;
+     * allows for checking every 2 seconds for 10 seconds before reset */
     uint32_t ulSignalRetryAttempts;
+    /* Counter for number of times we've retried connecting to the server;
+     * allows for checking every 1 second for 5 seconds before reset */
     uint32_t ulTCPRetryAttempts;
+    /* Mode to operate the network connection in (either data or transparent
+     * mode, see SIM5320 datasheet) */
     bool bMode = DATA_MODE;
+    /* Iteration variable for sample buffer array */
     uint32_t i;
+    /* Flag indicating if this is the first loop run or if there's already been
+     * a reset recovery. The RTC is only updated on the first run. */
     bool bFirstRun = true;
 
+    /* This will fail if the modem is already on, which is fine. */
     ModemPowerOn();
 
     /* This switches the modem to command mode if it was stuck in data mode
-     * from an earlier run. */
+     * from an earlier run (we have no way to know for sure and this is much
+     * quicker than waiting for commands to fail in the main loop). */
     ModemSwitchToCommandMode(true);
 
     /* Main task loop. */
@@ -1128,7 +1197,7 @@ static void ModemUARTTask(void *pvParameters) {
                 UART6RcvBufferClear();
             }
 
-        } while (!xModemStatus.signalPresent);
+        } while (!xModemStatus.signalPresent); /* Startup/signal acq loop. */
 
         /* A signal is present. This section attempts a data connection and
          * then a TCP connection to the server. */
@@ -1157,7 +1226,7 @@ static void ModemUARTTask(void *pvParameters) {
                 debug_print("tcp wasn't open\n");
                 ulTCPRetryAttempts = 0;
                 while ( ModemTCPConnect() && !xModemStatus.tcpConnectionOpen &&
-                        ulTCPRetryAttempts++ <= 4 ) {
+                        ulTCPRetryAttempts++ < 5 ) {
                     vTaskDelay(pdMS_TO_TICKS(1000));
                 }
             }
