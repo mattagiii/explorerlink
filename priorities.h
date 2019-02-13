@@ -43,11 +43,11 @@
  * maskable by the kernel. 0 is the highest priority (0-7). Other interrupt
  * priorities (with ISRs not containing API calls) are left at their
  * defaults. */
-#define PRIORITY_MODEM_UART_INT         6
-#define PRIORITY_SRF_UART_INT           6
-#define PRIORITY_DATA_SAMPLING_INT      6
-#define PRIORITY_CAN0_INT               5
+#define PRIORITY_MODEM_UART_INT         7
+#define PRIORITY_SRF_UART_INT           7
+#define PRIORITY_DATA_SAMPLING_INT      7
+#define PRIORITY_CAN0_INT               6
 #define PRIORITY_IGNITION_TIMER_INT     5
 
 
-#endif // __PRIORITIES_H__
+#endif /* __PRIORITIES_H__ */
