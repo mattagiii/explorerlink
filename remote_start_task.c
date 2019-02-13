@@ -559,17 +559,23 @@ static void RemoteStartTask( void *pvParameters ) {
 
                 /* Reinstate a 10-minute timeout. Really we should store the
                  * timer value when the client connection was lost and do quick
-                 * math to reinstate the value as if nothing happened. To do. */
+                 * math to reinstate the value as if nothing happened. TODO */
                 TimerLoadSet( WTIMER1_BASE, TIMER_A, TIMEOUT_NO_CLIENT );
             }
         }
         else if ( ulNotificationValue == RS_NOTIFY_IGNITION_ON ) {
+            /* Note that while the above notifications will trigger if other
+             * bits are set, this notification only triggers if it was the only
+             * bit set. */
 
             debug_print("rs notified: RS_NOTIFY_IGNITION_ON\n");
 
             IgnitionOn();
         }
         else if ( ulNotificationValue == RS_NOTIFY_START ) {
+            /* Note that while the above notifications will trigger if other
+             * bits are set, this notification only triggers if it was the only
+             * bit set. */
 
             debug_print("rs notified: RS_NOTIFY_START\n");
 

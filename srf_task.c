@@ -80,12 +80,16 @@ void UART3IntHandler(void) {
      * there are still characters in the FIFO but no new characters have been
      * received over a 32-bit period. Because the SRF02 sensors only transmit
      * 2-byte values, the FIFO should never contain more than 2 bytes and the
-     * status should always be UART_INT_RT. */
+     * status should always be UART_INT_RT.
+     * TODO: Check for UART_INT_RX in an else because it's actually an error. */
     if (ulStatus == UART_INT_RX || ulStatus == UART_INT_RT) {
 
         /* Loop until the RX FIFO is empty. Data will only arrive 2 bytes at a
          * time. UARTCharGetNonBlocking() will always succeed because
-         * UARTCharsAvail() is true. */
+         * UARTCharsAvail() is true. Looping this way is not ideal for an ISR,
+         * but the loop is at least guaranteed to exit because the reads occur
+         * much faster than bytes can arrive.
+         * TODO: Clear the FIFO in the task instead of here. */
         while(UARTCharsAvail(UART3_BASE)) {
             /* During normal operation, this clause should execute twice - once
              * for each data byte. If more than two bytes are present in the
