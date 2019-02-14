@@ -126,8 +126,7 @@ volatile uint32_t ulErrFlag = 0;
  * The CAN0 interrupt handler notifies the CAN task when a message is received
  * and sets error flags if errors occur.
  */
-void
-CAN0IntHandler( void ) {
+void CAN0IntHandler( void ) {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
     uint32_t ulStatus;
@@ -203,8 +202,7 @@ CAN0IntHandler( void ) {
 // saved to ulErrFlag, the Error Flag Set.
 //
 //*****************************************************************************
-void
-CANErrorHandler(void) {
+void CANErrorHandler(void) {
     // CAN controller has entered a Bus Off state.
     if(ulErrFlag & CAN_STATUS_BUS_OFF) {
         // Handle Error Condition here
@@ -439,8 +437,7 @@ static void CANTask( void *pvParameters ) {
  * and each is assigned a CAN ID in the array pulObj2ID. This array is used to
  * initialize the objects.
  */
-void
-InitCAN0(void) {
+void InitCAN0(void) {
 
     /* Loop variable for assigning CAN IDs to message objects. */
     uint32_t ulObjNum;
@@ -507,8 +504,7 @@ InitCAN0(void) {
  * Initialize the CAN task by setting up the CAN controller and creating the
  * task itself.
  */
-uint32_t
-CANTaskInit(void) {
+uint32_t CANTaskInit(void) {
 
     InitCAN0();
 
